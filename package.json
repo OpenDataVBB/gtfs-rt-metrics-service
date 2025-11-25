@@ -1,0 +1,52 @@
+{
+	"name": "gtfs-rt-metrics-service",
+	"description": "Consumes a GTFS Realtime (GTFS-RT) feed and serves metrics about it via HTTP.",
+	"version": "1.0.0",
+	"preferGlobal": true,
+	"type": "module",
+	"main": "index.js",
+	"bin": {
+		"serve-gtfs-rt-metrics": "./cli.js"
+	},
+	"files": [
+		"cli.js",
+		"index.js",
+		"lib"
+	],
+	"keywords": [
+		"gtfs",
+		"gtfs-rt",
+		"realtime",
+		"metrics",
+		"analysis",
+		"prometheus",
+		"public transport",
+		"transit"
+	],
+	"author": "Verkehrsverbund Berlin Brandenburg <info@vbb.de>",
+	"contributors": [
+		"Jannis R <mail@jannisr.de>"
+	],
+	"homepage": "https://github.com/OpenDataVBB/gtfs-rt-metrics-service",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/OpenDataVBB/gtfs-rt-metrics-service.git"
+	},
+	"bugs": "https://github.com/OpenDataVBB/gtfs-rt-metrics-service/issues",
+	"license": "ISC",
+	"engines": {
+		"node": ">=24"
+	},
+	"dependencies": {
+	},
+	"devDependencies": {
+		"@eslint/js": "^9.0.0",
+		"eslint": "^9.0.0",
+		"globals": "^16.5.0"
+	},
+	"scripts": {
+		"test": "./test/index.sh",
+		"lint": "eslint .",
+		"prepublishOnly": "npm run lint && npm test"
+	}
+}
