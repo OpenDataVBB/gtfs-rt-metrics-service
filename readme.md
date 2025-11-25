@@ -22,7 +22,13 @@ npm install -g OpenDataVBB/gtfs-rt-metrics-service
 ## Usage
 
 ```
-todo
+Usage:
+    serve-gtfs-rt-from-nats [options] -- <gtfs-rt-url> ...
+Options:
+    --port                    -p  Port to serve the metrics on.
+                                  Default: $PORT, otherwise 3000
+Examples:
+    serve-gtfs-rt-from-nats --port 1234 'https://example.org/gtfs-rt.pb'
 ```
 
 
