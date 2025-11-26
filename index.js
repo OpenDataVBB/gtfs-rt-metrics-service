@@ -22,6 +22,8 @@ class FeedProcessingError extends Error {}
 const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 	const {
 		gtfsRtUrls,
+		fetchInterval, // in milliseconds
+		userAgent,
 		port,
 	} = cfg
 
@@ -205,7 +207,6 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 		}
 	}
 
-	const fetchInterval = 10_000 // todo: make customisable
 	const _fetchAndProcessLoop = async () => {
 		const t0 = performance.now()
 

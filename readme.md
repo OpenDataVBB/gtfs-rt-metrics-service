@@ -27,6 +27,11 @@ Usage:
 Options:
     --port                    -p  Port to serve the metrics on.
                                   Default: $PORT, otherwise 3000
+    --fetch-interval          -i  How often to fetch the GTFS-RT feed, in seconds.
+                                  Default: $GTFS_RT_FETCH_INTERVAL, otherwise 10.
+    --user-agent              -a  Which User-Agent header to send when fetching the
+                                  feed via HTTP. Default: $USER_AGENT, otherwise
+                                  "gtfs-rt-metrics-service $random".
 Examples:
     serve-gtfs-rt-from-nats --port 1234 'https://example.org/gtfs-rt.pb'
 ```

@@ -20,6 +20,14 @@ const {
 			type: 'string',
 			short: 'p',
 		},
+		'fetch-interval': {
+			type: 'string',
+			short: 'i',
+		},
+		'user-agent': {
+			type: 'string',
+			short: 'a',
+		},
 	},
 	allowPositionals: true,
 })
@@ -31,6 +39,11 @@ Usage:
 Options:
     --port                    -p  Port to serve the metrics on.
                                   Default: $PORT, otherwise 3000
+    --fetch-interval          -i  How often to fetch the GTFS-RT feed, in seconds.
+                                  Default: $GTFS_RT_FETCH_INTERVAL, otherwise 10.
+    --user-agent              -a  Which User-Agent header to send when fetching the
+                                  feed via HTTP. Default: $USER_AGENT, otherwise
+                                  "${pkg.name} \$random".
 Examples:
     serve-gtfs-rt-from-nats --port 1234 'https://example.org/gtfs-rt.pb'
 \n`)
@@ -56,6 +69,22 @@ if ('port' in flags) {
 	cfg.port = parseInt(process.env.PORT)
 } else {
 	cfg.port = 3000
+}
+
+if ('fetch-interval' in flags) {
+	cfg.fetchInterval = parseInt(flags['fetch-interval']) * 1000
+} else if ('GTFS_RT_FETCH_INTERVAL' in process.env) {
+	cfg.fetchInterval = parseInt(process.env.GTFS_RT_FETCH_INTERVAL) * 1000
+} else {
+	cfg.fetchInterval = 10_000
+}
+
+if ('user-agent' in flags) {
+	cfg.userAgent = flags['user-agent']
+} else if ('USER_AGENT' in process.env) {
+	cfg.userAgent = process.env.USER_AGENT
+} else {
+	cfg.userAgent = `${pkg.name} ${randomBytes(2).toString('hex')}`
 }
 
 // todo: allow setting additional headers & fetch options
