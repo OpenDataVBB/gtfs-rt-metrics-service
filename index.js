@@ -1,6 +1,7 @@
 import {ok} from 'node:assert'
 import {Counter, Summary, Gauge} from 'prom-client'
 import {performance} from 'node:perf_hooks'
+import {createHash} from 'node:crypto'
 import _gtfsRtBindings from 'gtfs-rt-bindings'
 const {FeedMessage} = _gtfsRtBindings
 import {createLogger} from './lib/logger.js'
@@ -82,7 +83,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 		registers: [metricsRegister],
 		labelNames: [
 			// todo: by rt_feed_digest
-			'status', // success, fetch_failure, parse_failure, processing_failure
+			'status', // success_changed, success_unchanged, fetch_failure, parse_failure, processing_failure
 		],
 	})
 
@@ -139,6 +140,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 		feedEntitiesTotal.set(feedMsg.entity.length)
 	}
 
+	let prevEtagOrBodyHash = null
 	const fetchAndProcessFeed = async () => {
 		let metricsStatus = null
 		try {
@@ -148,6 +150,8 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 					'user-agent': userAgent,
 					// todo: implement https://gist.github.com/derhuerst/f0b6c9cf28b90746770464eb8e5b918f?
 					accept: 'application/protobuf',
+
+					// todo: implement proper caching using If-Modified-Since & If-None-Match!
 				},
 				keepalive: true,
 			})
@@ -157,6 +161,13 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 				err.url = gtfsRtUrl
 				err.resonse = res
 				throw err
+			}
+			if (res.headers.etag && res.headers === prevEtagOrBodyHash) {
+				metricsStatus = 'success_unchanged'
+				logger.debug({
+					etagOrBodyHash,
+				}, 'feed is unchanged (same ETag), not processing further')
+				return;
 			}
 			let feed
 			try {
@@ -169,6 +180,20 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 			feedSize.set(feed.length)
 
 			const tProcessingBegin = performance.now()
+
+			const etagOrBodyHash = (
+				res.headers.etag
+				|| createHash('sha1').update(feed).digest('hex')
+			)
+			const feedHasChanged = etagOrBodyHash !== prevEtagOrBodyHash
+			prevEtagOrBodyHash = etagOrBodyHash
+			if (!feedHasChanged) {
+				metricsStatus = 'success_unchanged'
+				logger.debug({
+					etagOrBodyHash,
+				}, 'feed is unchanged (equal body), not processing further')
+				return;
+			}
 
 			let feedMessage
 			try {
@@ -192,7 +217,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 			}
 
 			processingTime.observe((performance.now() - tProcessingBegin) / 1000)
-			metricsStatus = 'success'
+			metricsStatus = 'success_changed'
 		} catch (err) {
 			if (isProgrammerError(err)) {
 				throw err
