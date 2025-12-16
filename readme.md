@@ -11,6 +11,8 @@
 npm install -g OpenDataVBB/gtfs-rt-metrics-service
 ```
 
+This project uses [duckdb-gtfs-importer](https://github.com/OpenDataVBB/duckdb-gtfs-importer) to import the configured GTFS dataset. For running it using Docker (default), you need the [Docker CLI](https://docs.docker.com/reference/cli/docker/) installed. When running duckdb-gtfs-import without Docker, make sure you have its dependencies installed.
+
 
 ## Getting Started
 
