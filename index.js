@@ -56,9 +56,13 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 	ok(Number.isInteger(port), 'cfg.port must be an integer')
 
 	const {
+		matchingTimeBufferBefore, // milliseconds
+		matchingTimeBufferAfter, // milliseconds
 		normalizeAgencyIdForMetrics,
 		normalizeRouteIdForMetrics,
 	} = {
+		matchingTimeBufferBefore: 600_000, // 10 minutes
+		matchingTimeBufferAfter: 600_000, // 10 minutes
 		// keep cardinality low by normalizing, e.g. truncating, hashing
 		// see also https://www.robustperception.io/cardinality-is-key/
 		normalizeAgencyIdForMetrics: (agency_id) => agency_id === null ? '?' : agency_id.slice(0, 3),
@@ -121,11 +125,26 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 		],
 	})
 
+	const matchingTimeBufferBeforeSeconds = new Gauge({
+		name: 'matching_time_buffer_before_seconds',
+		help: 'Amount of time that Schedule trip instances can be in the past while still being matched with GTFS-RT entities.',
+		registers: [metricsRegister],
+	})
+	matchingTimeBufferBeforeSeconds.set(matchingTimeBufferBefore / 1000)
+	const matchingTimeBufferAfterSeconds = new Gauge({
+		name: 'matching_time_buffer_after_seconds',
+		help: 'Amount of time that Schedule trip instances can be in the future while still being matched with GTFS-RT entities.',
+		registers: [metricsRegister],
+	})
+	matchingTimeBufferAfterSeconds.set(matchingTimeBufferAfter / 1000)
+
 	const gtfsDb = await connectToGtfsDb()
 	const {
 		determineTripsRtCoverage,
 	} = createDetermineTripsRtCoverage({
 		gtfsDb,
+		timeBufferBefore: matchingTimeBufferBefore,
+		timeBufferAfter: matchingTimeBufferAfter,
 	})
 
 	const processFeedMessage = async (cfg) => {

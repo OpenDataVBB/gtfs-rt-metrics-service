@@ -34,6 +34,12 @@ Options:
     --user-agent              -a  Which User-Agent header to send when fetching the
                                   feed via HTTP. Default: $USER_AGENT, otherwise
                                   "gtfs-rt-metrics-service $random".
+    --matching-time-buffer-before Match GTFS-RT entities with Schedule trip instances
+                                  that have been (or were) active earlier than now.
+                                  Default: $GTFS_RT_MATCHING_TIME_BUFFER_BEFORE, otherwise 10m.
+    --matching-time-buffer-after  Match GTFS-RT entities with Schedule trip instances
+                                  that will be (or are) active later than now.
+                                  Default: $GTFS_RT_MATCHING_TIME_BUFFER_AFTER, otherwise 10m.
 Examples:
     serve-gtfs-rt-from-nats --port 1234 'https://example.org/gtfs-rt.pb'
 ```
