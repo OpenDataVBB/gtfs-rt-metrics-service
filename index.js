@@ -5,6 +5,12 @@ import {createHash} from 'node:crypto'
 import _gtfsRtBindings from 'gtfs-rt-bindings'
 const {FeedMessage} = _gtfsRtBindings
 import {createLogger} from './lib/logger.js'
+import {
+	connectToGtfsDb,
+} from './lib/gtfs-db.js'
+import {
+	createDetermineTripsRtCoverage,
+} from './lib/matching.js'
 import {createMetricsServer, register as metricsRegister} from './lib/metrics.js'
 import {
 	isProgrammerError,
@@ -48,6 +54,17 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 	ok(Number.isInteger(fetchInterval), 'cfg.fetchInterval must be an integer')
 
 	ok(Number.isInteger(port), 'cfg.port must be an integer')
+
+	const {
+		normalizeAgencyIdForMetrics,
+		normalizeRouteIdForMetrics,
+	} = {
+		// keep cardinality low by normalizing, e.g. truncating, hashing
+		// see also https://www.robustperception.io/cardinality-is-key/
+		normalizeAgencyIdForMetrics: (agency_id) => agency_id === null ? '?' : agency_id.slice(0, 3),
+		normalizeRouteIdForMetrics: (route_id) => route_id === null ? '?' : route_id.slice(0, 5),
+		...opt,
+	}
 
 	const logger = createLogger('service')
 	const feedLogger = createLogger('feed')
@@ -104,7 +121,14 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 		],
 	})
 
-	const processFeedMessage = (cfg) => {
+	const gtfsDb = await connectToGtfsDb()
+	const {
+		determineTripsRtCoverage,
+	} = createDetermineTripsRtCoverage({
+		gtfsDb,
+	})
+
+	const processFeedMessage = async (cfg) => {
 		const {
 			feedMessage: feedMsg,
 		} = cfg
@@ -138,6 +162,14 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 		}
 		ok(Array.isArray(feedMsg.entity), 'feedMsg.entity must be an array')
 		feedEntitiesTotal.set(feedMsg.entity.length)
+
+		const {
+			nrOfActiveScheduleTrips,
+			nrOfRtTrips,
+			unmatchedRtTrips,
+			unmatchedSchedTrips,
+		} = await determineTripsRtCoverage(feedMsg)
+		// todo
 	}
 
 	let prevEtagOrBodyHash = null
@@ -205,7 +237,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 			}
 			
 			try {
-				processFeedMessage({
+				await processFeedMessage({
 					feedMessage,
 				})
 			} catch (err) {
