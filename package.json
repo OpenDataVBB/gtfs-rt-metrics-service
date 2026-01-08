@@ -40,6 +40,7 @@
 	"dependencies": {
 		"@duckdb/node-api": "^1.4.2-r.1",
 		"gtfs-rt-bindings": "^4.9.0",
+		"gtfs-utils": "^5.1.0",
 		"lodash": "^4.17.21",
 		"longfn": "^1.3.1",
 		"pino": "^10.1.0",
