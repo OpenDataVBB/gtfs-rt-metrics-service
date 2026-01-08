@@ -187,14 +187,43 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 	})
 	matchingTimeBufferAfterSeconds.set(matchingTimeBufferAfter / 1000)
 
-	const gtfsDb = await connectToGtfsDb()
-	const {
-		determineTripsRtCoverage,
-	} = createDetermineTripsRtCoverage({
-		gtfsDb,
-		timeBufferBefore: matchingTimeBufferBefore,
-		timeBufferAfter: matchingTimeBufferAfter,
-	})
+	let determineTripsRtCoverage
+
+	let pGtfsDb = null
+	let gtfsDb = null
+	const _reconnectGtfsDb = async () => {
+		logger.debug({
+			alreadyConnected: Boolean(gtfsDb),
+			connecting: pGtfsDb !== null,
+		}, 'reconnecting to GTFS Schedule DB')
+
+		if (pGtfsDb) {
+			logger.trace('-- waiting for current GTFS Schedule DB connection initiation before reconnecting')
+			await pGtfsDb
+			await new Promise(resolve => setTimeout(resolve, 1))
+		}
+		if (gtfsDb) {
+			logger.trace('-- disconnecting from current GTFS Schedule DB')
+			gtfsDb.db.closeSync()
+		}
+
+		logger.trace('-- reconnecting to GTFS Schedule DB')
+		try {
+			pGtfsDb = connectToGtfsDb()
+			gtfsDb = await pGtfsDb
+		} finally {
+			pGtfsDb = null
+		}
+		logger.trace('-- successfully reconnected to GTFS Schedule DB')
+
+		const _detCov = createDetermineTripsRtCoverage({
+			gtfsDb,
+			timeBufferBefore: matchingTimeBufferBefore,
+			timeBufferAfter: matchingTimeBufferAfter,
+		})
+		determineTripsRtCoverage = _detCov.determineTripsRtCoverage
+	}
+	await _reconnectGtfsDb()
 
 	const processFeedMessage = async (cfg) => {
 		const {
@@ -320,6 +349,10 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 	let prevEtagOrBodyHash = null
 	const fetchAndProcessFeed = async () => {
 		const tFetch = Date.now()
+		logger.debug({
+			tFetch,
+		}, 'fetching and processing GTFS-RT feed')
+
 		let metricsStatus = null
 		try {
 			const tFetchBegin = performance.now()
@@ -427,6 +460,23 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 	}
 	// prevent DOSing due to endless crash loops, but fetch sooner than `fetchInterval`
 	let fetchTimer = setTimeout(_fetchAndProcessLoop, fetchInterval / 10)
+	const fetchFeedNow = () => {
+		clearTimeout(fetchTimer)
+		fetchTimer = setTimeout(_fetchAndProcessLoop, 1)
+	}
+
+	const reconnectGtfsDbAndFetchAgain = async () => {
+		logger.info('received SIGHUP, reconnecting to GTFS Schedule DB, then fetching GTFS-RT again')
+		try {
+			await _reconnectGtfsDb()
+			fetchFeedNow()
+		} catch (err) {
+			logger.error({
+				err,
+			}, 'failed to reconnect to the GTFS Schedule DB')
+		}
+	}
+	process.on('SIGHUP', reconnectGtfsDbAndFetchAgain)
 
 	const metricsServer = createMetricsServer({
 		serverPort: port,
