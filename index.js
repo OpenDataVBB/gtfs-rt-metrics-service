@@ -16,6 +16,9 @@ import {
 	isProgrammerError,
 	countByLabels,
 	protobufJsLongToBigInt,
+	normalizeAgencyIdForMetrics as defaultNormalizeAgencyIdForMetrics,
+	normalizeRouteIdForMetrics as defaultNormalizeRouteIdForMetrics,
+	normalizeRouteTypeForMetrics as defaultNormalizeRouteTypeForMetrics,
 } from './lib/util.js'
 
 // > enum Incrementality {
@@ -67,10 +70,9 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 		matchingTimeBufferAfter: 600_000, // 10 minutes
 		// keep cardinality low by normalizing, e.g. truncating, hashing
 		// see also https://www.robustperception.io/cardinality-is-key/
-		normalizeAgencyIdForMetrics: (agency_id) => agency_id === null ? '?' : agency_id.slice(0, 3),
-		normalizeRouteIdForMetrics: (route_id) => route_id === null ? '?' : route_id.slice(0, 5),
-		// todo: map to simple route_type?
-		normalizeRouteTypeForMetrics: (route_type) => route_type === null ? '?' : String(route_type),
+		normalizeAgencyIdForMetrics: defaultNormalizeAgencyIdForMetrics,
+		normalizeRouteIdForMetrics: defaultNormalizeRouteIdForMetrics,
+		normalizeRouteTypeForMetrics: defaultNormalizeRouteTypeForMetrics,
 		...opt,
 	}
 
@@ -231,11 +233,11 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 		feedEntitiesTotal.set(feedMsg.entity.length)
 
 		const {
-			nrOfActiveScheduleTripInstances: nrOfActiveScheduleTrips,
+			nrOfActiveScheduleTripInstances,
 			scheduleTripDescsByRtTripDesc,
-			rtTrips: rtItems,
-			unmatchedRtTrips,
-			unmatchedSchedTrips,
+			rtTripInstances,
+			unmatchedRtTripInstances,
+			unmatchedSchedTripInstances,
 		} = await determineTripsRtCoverage(feedMsg)
 
 		const _getSchedTripInstanceLabels = (rtTripDesc) => {
@@ -262,7 +264,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 				'kind', // tu=TripUpdate, vp=VehiclePosition
 				'route_id_n', // normalized route_id
 			],
-			unmatchedRtTrips.values().map(([tripDesc, _, kind]) => {
+			unmatchedRtTripInstances.values().map(([tripDesc, _, kind]) => {
 				const route_id_n = normalizeRouteIdForMetrics(tripDesc.route_id)
 				return [
 					kind,
@@ -280,7 +282,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 				'route_type_n', // normalized route_type
 				'route_id_n', // normalized route_id
 			],
-			unmatchedSchedTrips.values().map(([tripDesc, _, kind]) => {
+			unmatchedSchedTripInstances.values().map(([tripDesc, _, kind]) => {
 				const agency_id_n = normalizeAgencyIdForMetrics(tripDesc.agency_id)
 				const route_type_n = normalizeRouteTypeForMetrics(tripDesc.route_type)
 				const route_id_n = normalizeRouteIdForMetrics(tripDesc.route_id)
@@ -295,7 +297,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 			unmatchedScheduleTripInstancesTotal.set(labels, count)
 		}
 
-		for (const [tripDesc, feedItem, kind] of rtItems.values()) {
+		for (const [tripDesc, feedItem, kind] of rtTripInstances.values()) {
 			if (!feedItem.timestamp) continue // todo: track these too
 
 			const {
