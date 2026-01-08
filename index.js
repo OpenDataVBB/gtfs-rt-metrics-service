@@ -14,6 +14,7 @@ import {
 import {createMetricsServer, register as metricsRegister} from './lib/metrics.js'
 import {
 	isProgrammerError,
+	countByLabels,
 	protobufJsLongToBigInt,
 } from './lib/util.js'
 
@@ -60,6 +61,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 		matchingTimeBufferAfter, // milliseconds
 		normalizeAgencyIdForMetrics,
 		normalizeRouteIdForMetrics,
+		normalizeRouteTypeForMetrics,
 	} = {
 		matchingTimeBufferBefore: 600_000, // 10 minutes
 		matchingTimeBufferAfter: 600_000, // 10 minutes
@@ -67,6 +69,8 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 		// see also https://www.robustperception.io/cardinality-is-key/
 		normalizeAgencyIdForMetrics: (agency_id) => agency_id === null ? '?' : agency_id.slice(0, 3),
 		normalizeRouteIdForMetrics: (route_id) => route_id === null ? '?' : route_id.slice(0, 5),
+		// todo: map to simple route_type?
+		normalizeRouteTypeForMetrics: (route_type) => route_type === null ? '?' : String(route_type),
 		...opt,
 	}
 
@@ -124,6 +128,49 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 			// todo: by rt_feed_digest
 		],
 	})
+	const activeScheduleTripInstancesTotal = new Gauge({
+		name: 'gtfs_rt_active_schedule_trip_instances_total',
+		help: 'number of active trip instances in the GTFS Schedule feed within the matching time period (see matching_time_buffer_before/matching_time_buffer_after)',
+		registers: [metricsRegister],
+		labelNames: [
+			// todo: by rt_feed_digest
+		],
+	})
+
+	const unmatchedRtItemsTotal = new Gauge({
+		name: 'unmatched_rt_items_total',
+		help: `number of items (FeedEntity children) in the GTFS-RT feed that can't be matched with the Schedule feed`,
+		registers: [metricsRegister],
+		labelNames: [
+			// todo: by rt_feed_digest
+			'kind', // tu=TripUpdate, vp=VehiclePosition
+			'route_id_n', // normalized route_id
+		],
+	})
+	const unmatchedScheduleTripInstancesTotal = new Gauge({
+		name: 'unmatched_schedule_trip_instances_total',
+		help: `number of trip instances in the Schedule feed that don't have a corresponding GTFS-RT item`,
+		registers: [metricsRegister],
+		labelNames: [
+			// todo: by rt_feed_digest
+			'agency_id_n', // normalized agency_id
+			'route_type_n', // normalized route_type
+			'route_id_n', // normalized route_id
+		],
+	})
+
+	const rtItemsAgesSeconds = new Summary({
+		name: 'rt_items_ages_seconds',
+		help: `age (time until now) of each item (FeedEntity children) in the GTFS-RT feed that has a .timestamp`,
+		registers: [metricsRegister],
+		labelNames: [
+			// todo: by rt_feed_digest
+			'kind', // tu=TripUpdate, vp=VehiclePosition
+			'agency_id_n', // normalized agency_id, only if matched with Schedule trip instance
+			'route_type_n', // normalized route_type, only if matched with Schedule trip instance
+			'route_id_n', // normalized route_id
+		],
+	})
 
 	const matchingTimeBufferBeforeSeconds = new Gauge({
 		name: 'matching_time_buffer_before_seconds',
@@ -150,6 +197,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 	const processFeedMessage = async (cfg) => {
 		const {
 			feedMessage: feedMsg,
+			tFetch,
 		} = cfg
 
 		if (
@@ -183,16 +231,93 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 		feedEntitiesTotal.set(feedMsg.entity.length)
 
 		const {
-			nrOfActiveScheduleTrips,
-			nrOfRtTrips,
+			nrOfActiveScheduleTripInstances: nrOfActiveScheduleTrips,
+			scheduleTripDescsByRtTripDesc,
+			rtTrips: rtItems,
 			unmatchedRtTrips,
 			unmatchedSchedTrips,
 		} = await determineTripsRtCoverage(feedMsg)
-		// todo
+
+		const _getSchedTripInstanceLabels = (rtTripDesc) => {
+			let agency_id_n = '?'
+			let route_type_n = '?'
+			if (scheduleTripDescsByRtTripDesc.has(rtTripDesc)) {
+				const {
+					agency_id,
+					route_type,
+				} = scheduleTripDescsByRtTripDesc.get(rtTripDesc)
+				agency_id_n = normalizeAgencyIdForMetrics(agency_id)
+				route_type_n = normalizeAgencyIdForMetrics(route_type)
+			}
+			return {
+				agency_id_n,
+				route_type_n,
+			}
+		}
+
+		activeScheduleTripInstancesTotal.set(nrOfActiveScheduleTripInstances)
+
+		const _unmatchedRt = countByLabels(
+			[
+				'kind', // tu=TripUpdate, vp=VehiclePosition
+				'route_id_n', // normalized route_id
+			],
+			unmatchedRtTrips.values().map(([tripDesc, _, kind]) => {
+				const route_id_n = normalizeRouteIdForMetrics(tripDesc.route_id)
+				return [
+					kind,
+					route_id_n,
+				]
+			}),
+		)
+		for (const [labels, count] of _unmatchedRt) {
+			unmatchedRtItemsTotal.set(labels, count)
+		}
+
+		const _unmatchedSched = countByLabels(
+			[
+				'agency_id_n', // normalized agency_id
+				'route_type_n', // normalized route_type
+				'route_id_n', // normalized route_id
+			],
+			unmatchedSchedTrips.values().map(([tripDesc, _, kind]) => {
+				const agency_id_n = normalizeAgencyIdForMetrics(tripDesc.agency_id)
+				const route_type_n = normalizeRouteTypeForMetrics(tripDesc.route_type)
+				const route_id_n = normalizeRouteIdForMetrics(tripDesc.route_id)
+				return [
+					agency_id_n,
+					route_type_n,
+					route_id_n,
+				]
+			}),
+		)
+		for (const [labels, count] of _unmatchedSched) {
+			unmatchedScheduleTripInstancesTotal.set(labels, count)
+		}
+
+		for (const [tripDesc, feedItem, kind] of rtItems.values()) {
+			if (!feedItem.timestamp) continue // todo: track these too
+
+			const {
+				agency_id_n,
+				route_type_n,
+			} = _getSchedTripInstanceLabels(tripDesc)
+			const route_id_n = normalizeRouteIdForMetrics(tripDesc.route_id)
+
+			const ts = protobufJsLongToBigInt(feedItem.timestamp)
+			const age = Number(BigInt(tFetch) - ts * BigInt(1000))
+			rtItemsAgesSeconds.observe({
+				kind,
+				agency_id_n,
+				route_type_n,
+				route_id_n,
+			}, age / 1000)
+		}
 	}
 
 	let prevEtagOrBodyHash = null
 	const fetchAndProcessFeed = async () => {
+		const tFetch = Date.now()
 		let metricsStatus = null
 		try {
 			const tFetchBegin = performance.now()
@@ -258,6 +383,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 			try {
 				await processFeedMessage({
 					feedMessage,
+					tFetch,
 				})
 			} catch (err) {
 				metricsStatus = 'processing_failure'
