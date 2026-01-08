@@ -80,8 +80,8 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 	const feedLogger = createLogger('feed')
 
 	const feedSize = new Gauge({
-		name: 'feed_size_raw_bytes',
-		help: 'size of the final GTFS-RT feed',
+		name: 'gtfs_rt_feed_size_raw_bytes',
+		help: 'size of the final GTFS-RT feed (uncompressed)',
 		registers: [metricsRegister],
 		labelNames: [
 			// todo: by rt_feed_digest
@@ -89,7 +89,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 	})
 	// todo: last-modified timestamp
 	const fetchTime = new Summary({
-		name: 'fetch_time_seconds',
+		name: 'gtfs_rt_fetch_time_seconds',
 		help: 'time needed to fetch the GTFS-RT feed',
 		registers: [metricsRegister],
 		labelNames: [
@@ -97,16 +97,16 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 		],
 	})
 	const processingTime = new Summary({
-		name: 'processing_time_seconds',
-		help: 'time needed to process the fetched GTFS-RT feed',
+		name: 'gtfs_rt_processing_time_seconds',
+		help: 'time needed to process the GTFS-RT feed',
 		registers: [metricsRegister],
 		labelNames: [
 			// todo: by rt_feed_digest
 		],
 	})
 	const feedFetchesTotal = new Counter({
-		name: 'feed_fetches_total',
-		help: 'how often the GTFS-RT feed has been fetched',
+		name: 'gtfs_rt_feed_fetches_total',
+		help: 'how often the GTFS-RT feed has been fetched & processed',
 		registers: [metricsRegister],
 		labelNames: [
 			// todo: by rt_feed_digest
@@ -115,16 +115,16 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 	})
 
 	const feedTimestampSeconds = new Gauge({
-		name: 'feed_timestamp_seconds',
-		help: 'FeedHeader.timestamp, if present',
+		name: 'gtfs_rt_feed_timestamp_seconds',
+		help: 'GTFS-RT FeedHeader.timestamp, if present',
 		registers: [metricsRegister],
 		labelNames: [
 			// todo: by rt_feed_digest
 		],
 	})
 	const feedEntitiesTotal = new Gauge({
-		name: 'feed_entities_total',
-		help: 'number of entities in the feed',
+		name: 'gtfs_rt_feed_entities_total',
+		help: 'number of entities in the GTFS-RT feed',
 		registers: [metricsRegister],
 		labelNames: [
 			// todo: by rt_feed_digest
@@ -140,7 +140,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 	})
 
 	const unmatchedRtItemsTotal = new Gauge({
-		name: 'unmatched_rt_items_total',
+		name: 'gtfs_rt_unmatched_rt_items_total',
 		help: `number of items (FeedEntity children) in the GTFS-RT feed that can't be matched with the Schedule feed`,
 		registers: [metricsRegister],
 		labelNames: [
@@ -150,7 +150,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 		],
 	})
 	const unmatchedScheduleTripInstancesTotal = new Gauge({
-		name: 'unmatched_schedule_trip_instances_total',
+		name: 'gtfs_rt_unmatched_schedule_trip_instances_total',
 		help: `number of trip instances in the Schedule feed that don't have a corresponding GTFS-RT item`,
 		registers: [metricsRegister],
 		labelNames: [
@@ -161,8 +161,8 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 		],
 	})
 
-	const rtItemsAgesSeconds = new Summary({
-		name: 'rt_items_ages_seconds',
+	const rtFeedItemsAgesSeconds = new Summary({
+		name: 'gtfs_rt_feed_items_ages_seconds',
 		help: `age (time until now) of each item (FeedEntity children) in the GTFS-RT feed that has a .timestamp`,
 		registers: [metricsRegister],
 		labelNames: [
@@ -175,13 +175,13 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 	})
 
 	const matchingTimeBufferBeforeSeconds = new Gauge({
-		name: 'matching_time_buffer_before_seconds',
+		name: 'gtfs_rt_matching_time_buffer_before_seconds',
 		help: 'Amount of time that Schedule trip instances can be in the past while still being matched with GTFS-RT entities.',
 		registers: [metricsRegister],
 	})
 	matchingTimeBufferBeforeSeconds.set(matchingTimeBufferBefore / 1000)
 	const matchingTimeBufferAfterSeconds = new Gauge({
-		name: 'matching_time_buffer_after_seconds',
+		name: 'gtfs_rt_matching_time_buffer_after_seconds',
 		help: 'Amount of time that Schedule trip instances can be in the future while still being matched with GTFS-RT entities.',
 		registers: [metricsRegister],
 	})
@@ -308,7 +308,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 
 			const ts = protobufJsLongToBigInt(feedItem.timestamp)
 			const age = Number(BigInt(tFetch) - ts * BigInt(1000))
-			rtItemsAgesSeconds.observe({
+			rtFeedItemsAgesSeconds.observe({
 				kind,
 				agency_id_n,
 				route_type_n,
