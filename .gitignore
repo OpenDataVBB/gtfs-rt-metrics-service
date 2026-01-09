@@ -8,3 +8,6 @@ node_modules
 /yarn.lock
 
 /gtfs
+
+# We only check the compressed version into Git.
+test/fixtures/*.gtfs.duckdb
