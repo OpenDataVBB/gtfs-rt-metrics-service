@@ -8,6 +8,7 @@ LABEL org.opencontainers.image.description="Consumes a GTFS Realtime (GTFS-RT) f
 LABEL org.opencontainers.image.authors="Verkehrsverbund Berlin Brandenburg <info@vbb.de>"
 
 # install dependencies
+ADD package.json /app
 RUN npm install --production
 
 # add source code
