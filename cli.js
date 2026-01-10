@@ -49,7 +49,7 @@ Options:
                                   Default: $GTFS_RT_FETCH_INTERVAL, otherwise 10.
     --user-agent              -a  Which User-Agent header to send when fetching the
                                   feed via HTTP. Default: $USER_AGENT, otherwise
-                                  "${pkg.name} \$random".
+                                  "${pkg.name} $random".
     --matching-time-buffer-before Match GTFS-RT entities with Schedule trip instances
                                   that have been (or were) active earlier than now,
                                   in seconds.

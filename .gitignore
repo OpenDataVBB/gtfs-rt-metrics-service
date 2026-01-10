@@ -11,3 +11,5 @@ node_modules
 
 # We only check the compressed version into Git.
 test/fixtures/*.gtfs.duckdb
+
+/*.gtfs-rt.pb

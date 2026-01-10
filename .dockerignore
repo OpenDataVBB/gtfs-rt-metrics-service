@@ -1,2 +1,8 @@
 .git
 node_modules
+
+/gtfs
+
+/test
+
+/*.gtfs-rt.pb
