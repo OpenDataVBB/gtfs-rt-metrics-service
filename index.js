@@ -294,7 +294,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 				'route_id_n', // normalized route_id
 			],
 			unmatchedRtTripInstances.values().map(([tripDesc, _, kind]) => {
-				const route_id_n = normalizeRouteIdForMetrics(tripDesc.route_id)
+				const route_id_n = normalizeRouteIdForMetrics(tripDesc.route_id ?? null)
 				return [
 					kind,
 					route_id_n,
@@ -333,7 +333,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 				agency_id_n,
 				route_type_n,
 			} = _getSchedTripInstanceLabels(tripDesc)
-			const route_id_n = normalizeRouteIdForMetrics(tripDesc.route_id)
+			const route_id_n = normalizeRouteIdForMetrics(tripDesc.route_id ?? null)
 
 			const ts = protobufJsLongToBigInt(feedItem.timestamp)
 			const age = Number(BigInt(tFetch) - ts * BigInt(1000))
