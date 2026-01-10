@@ -431,7 +431,11 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 			processingTime.observe((performance.now() - tProcessingBegin) / 1000)
 			metricsStatus = 'success_changed'
 		} catch (err) {
-			if (isProgrammerError(err)) {
+			// Some fetch API errors are TypeErrors, but we don't want to throw them.
+			if (
+				isProgrammerError(err)
+				&& !(err instanceof TypeError && err.code === 'ENOENT')
+			) {
 				throw err
 			}
 			logger.warn({
