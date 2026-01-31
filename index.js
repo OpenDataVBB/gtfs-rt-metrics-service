@@ -130,14 +130,6 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 			// todo: by rt_feed_digest
 		],
 	})
-	const activeScheduleTripInstancesTotal = new Gauge({
-		name: 'gtfs_rt_active_schedule_trip_instances_total',
-		help: 'number of active trip instances in the GTFS Schedule feed within the matching time period (see matching_time_buffer_before/matching_time_buffer_after)',
-		registers: [metricsRegister],
-		labelNames: [
-			// todo: by rt_feed_digest
-		],
-	})
 
 	const unmatchedRtItemsTotal = new Gauge({
 		name: 'gtfs_rt_unmatched_rt_items_total',
@@ -262,7 +254,6 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 		feedEntitiesTotal.set(feedMsg.entity.length)
 
 		const {
-			nrOfActiveScheduleTripInstances,
 			scheduleTripDescsByRtTripDesc,
 			rtTripInstances,
 			unmatchedRtTripInstances,
@@ -285,8 +276,6 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 				route_type_n,
 			}
 		}
-
-		activeScheduleTripInstancesTotal.set(nrOfActiveScheduleTripInstances)
 
 		const _unmatchedRt = countByLabels(
 			[

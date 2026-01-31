@@ -92,10 +92,6 @@ gtfs_rt_feed_timestamp_seconds 1767894747
 # TYPE gtfs_rt_feed_entities_total gauge
 gtfs_rt_feed_entities_total 8529
 
-# HELP gtfs_rt_active_schedule_trip_instances_total number of active trip instances in the GTFS Schedule feed within the matching time period (see matching_time_buffer_before/matching_time_buffer_after)
-# TYPE gtfs_rt_active_schedule_trip_instances_total gauge
-gtfs_rt_active_schedule_trip_instances_total 3069
-
 # HELP gtfs_rt_unmatched_rt_items_total number of items (FeedEntity children) in the GTFS-RT feed that can't be matched with the Schedule feed
 # TYPE gtfs_rt_unmatched_rt_items_total gauge
 gtfs_rt_unmatched_rt_items_total{kind="tu",route_id_n="23945"} 16
