@@ -131,25 +131,27 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 		],
 	})
 
-	const unmatchedRtItemsTotal = new Gauge({
-		name: 'gtfs_rt_unmatched_rt_items_total',
-		help: `number of items (FeedEntity children) in the GTFS-RT feed that can't be matched with the Schedule feed`,
+	const rtItemsTotal = new Gauge({
+		name: 'gtfs_rt_items_total',
+		help: `number of items (FeedEntity children) in the GTFS-RT feed, by their matching result with the Schedule feed`,
 		registers: [metricsRegister],
 		labelNames: [
 			// todo: by rt_feed_digest
 			'kind', // tu=TripUpdate, vp=VehiclePosition
 			'route_id_n', // normalized route_id
+			'matched', // 0 or 1
 		],
 	})
-	const unmatchedScheduleTripInstancesTotal = new Gauge({
-		name: 'gtfs_rt_unmatched_schedule_trip_instances_total',
-		help: `number of trip instances in the Schedule feed that don't have a corresponding GTFS-RT item`,
+	const scheduleTripInstancesTotal = new Gauge({
+		name: 'gtfs_rt_schedule_trip_instances_total',
+		help: `number of trip instances in the Schedule feed, and if they have >=1 corresponding GTFS-RT items`,
 		registers: [metricsRegister],
 		labelNames: [
 			// todo: by rt_feed_digest
 			'agency_id_n', // normalized agency_id
 			'route_type_n', // normalized route_type
 			'route_id_n', // normalized route_id
+			'matched', // 0 or 1
 		],
 	})
 
@@ -163,6 +165,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 			'agency_id_n', // normalized agency_id, only if matched with Schedule trip instance
 			'route_type_n', // normalized route_type, only if matched with Schedule trip instance
 			'route_id_n', // normalized route_id
+			'matched', // 0 or 1
 		],
 	})
 
@@ -254,6 +257,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 		feedEntitiesTotal.set(feedMsg.entity.length)
 
 		const {
+			activeSchedTripInstances,
 			scheduleTripDescsByRtTripDesc,
 			rtTripInstances,
 			unmatchedRtTripInstances,
@@ -261,9 +265,11 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 		} = await determineTripsRtCoverage(feedMsg)
 
 		const _getSchedTripInstanceLabels = (rtTripDesc) => {
+			let matched = '0'
 			let agency_id_n = '?'
 			let route_type_n = '?'
 			if (scheduleTripDescsByRtTripDesc.has(rtTripDesc)) {
+				matched = '1'
 				const {
 					agency_id,
 					route_type,
@@ -272,35 +278,43 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 				route_type_n = normalizeAgencyIdForMetrics(route_type)
 			}
 			return {
+				matched,
 				agency_id_n,
 				route_type_n,
 			}
 		}
 
-		const _unmatchedRt = countByLabels(
+		const _rtMetrics = countByLabels(
 			[
 				'kind', // tu=TripUpdate, vp=VehiclePosition
 				'route_id_n', // normalized route_id
+				'matched', // 0 or 1
 			],
-			unmatchedRtTripInstances.values().map(([tripDesc, _, kind]) => {
+			rtTripInstances.map((tripInstance) => {
+				const [tripDesc, , kind] = tripInstance
+				const matched = unmatchedRtTripInstances.has(tripInstance)
 				const route_id_n = normalizeRouteIdForMetrics(tripDesc.route_id ?? null)
 				return [
 					kind,
 					route_id_n,
+					matched ? '1' : '0',
 				]
 			}),
 		)
-		for (const [labels, count] of _unmatchedRt) {
-			unmatchedRtItemsTotal.set(labels, count)
+		for (const [labels, count] of _rtMetrics) {
+			rtItemsTotal.set(labels, count)
 		}
 
-		const _unmatchedSched = countByLabels(
+		const _scheduleMetrics = countByLabels(
 			[
 				'agency_id_n', // normalized agency_id
 				'route_type_n', // normalized route_type
 				'route_id_n', // normalized route_id
+				'matched', // 0 or 1
 			],
-			unmatchedSchedTripInstances.values().map(([tripDesc]) => {
+			activeSchedTripInstances.map((tripInstance) => {
+				const [tripDesc] = tripInstance
+				const matched = unmatchedSchedTripInstances.includes(tripInstance)
 				const agency_id_n = normalizeAgencyIdForMetrics(tripDesc.agency_id)
 				const route_type_n = normalizeRouteTypeForMetrics(tripDesc.route_type)
 				const route_id_n = normalizeRouteIdForMetrics(tripDesc.route_id)
@@ -308,17 +322,19 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 					agency_id_n,
 					route_type_n,
 					route_id_n,
+					matched ? '1' : '0',
 				]
 			}),
 		)
-		for (const [labels, count] of _unmatchedSched) {
-			unmatchedScheduleTripInstancesTotal.set(labels, count)
+		for (const [labels, count] of _scheduleMetrics) {
+			scheduleTripInstancesTotal.set(labels, count)
 		}
 
 		for (const [tripDesc, feedItem, kind] of rtTripInstances.values()) {
 			if (!feedItem.timestamp) continue // todo: track these too
 
 			const {
+				matched,
 				agency_id_n,
 				route_type_n,
 			} = _getSchedTripInstanceLabels(tripDesc)
@@ -331,6 +347,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 				agency_id_n,
 				route_type_n,
 				route_id_n,
+				matched,
 			}, age / 1000)
 		}
 	}

@@ -92,41 +92,49 @@ gtfs_rt_feed_timestamp_seconds 1767894747
 # TYPE gtfs_rt_feed_entities_total gauge
 gtfs_rt_feed_entities_total 8529
 
-# HELP gtfs_rt_unmatched_rt_items_total number of items (FeedEntity children) in the GTFS-RT feed that can't be matched with the Schedule feed
-# TYPE gtfs_rt_unmatched_rt_items_total gauge
-gtfs_rt_unmatched_rt_items_total{kind="tu",route_id_n="23945"} 16
-gtfs_rt_unmatched_rt_items_total{kind="tu",route_id_n="18354"} 8
-gtfs_rt_unmatched_rt_items_total{kind="tu",route_id_n="10224"} 86
+# HELP gtfs_rt_items_total number of items (FeedEntity children) in the GTFS-RT feed, by their matching result with the Schedule feed
+# TYPE gtfs_rt_items_total gauge
+gtfs_rt_items_total{kind="tu",route_id_n="23944",matched="1"} 11
+gtfs_rt_items_total{kind="tu",route_id_n="23945",matched="1"} 22
+gtfs_rt_items_total{kind="tu",route_id_n="10141",matched="1"} 129
+gtfs_rt_items_total{kind="tu",route_id_n="23944",matched="0"} 2
+gtfs_rt_items_total{kind="tu",route_id_n="7362_",matched="0"} 5
 # …
 
-# HELP gtfs_rt_unmatched_schedule_trip_instances_total number of trip instances in the Schedule feed that don't have a corresponding GTFS-RT item
-# TYPE gtfs_rt_unmatched_schedule_trip_instances_total gauge
-gtfs_rt_unmatched_schedule_trip_instances_total{agency_id_n="32",route_type_n="700",route_id_n="5241_"} 1
-gtfs_rt_unmatched_schedule_trip_instances_total{agency_id_n="32",route_type_n="700",route_id_n="25354"} 1
-gtfs_rt_unmatched_schedule_trip_instances_total{agency_id_n="32",route_type_n="3",route_id_n="5250_"} 1
+# HELP gtfs_rt_schedule_trip_instances_total number of trip instances in the Schedule feed, and if they have >=1 corresponding GTFS-RT items
+# TYPE gtfs_rt_schedule_trip_instances_total gauge
+gtfs_rt_schedule_trip_instances_total{agency_id_n="32",route_type_n="700",route_id_n="5233_",matched="0"} 2
+gtfs_rt_schedule_trip_instances_total{agency_id_n="32",route_type_n="700",route_id_n="5236_",matched="0"} 1
+gtfs_rt_schedule_trip_instances_total{agency_id_n="32",route_type_n="700",route_id_n="5238_",matched="0"} 2
+gtfs_rt_schedule_trip_instances_total{agency_id_n="32",route_type_n="700",route_id_n="5238_",matched="1"} 2
+gtfs_rt_schedule_trip_instances_total{agency_id_n="32",route_type_n="700",route_id_n="5239_",matched="0"} 2
+gtfs_rt_schedule_trip_instances_total{agency_id_n="32",route_type_n="700",route_id_n="5248_",matched="0"} 2
+gtfs_rt_schedule_trip_instances_total{agency_id_n="32",route_type_n="700",route_id_n="5249_",matched="0"} 5
+gtfs_rt_schedule_trip_instances_total{agency_id_n="32",route_type_n="700",route_id_n="25354",matched="1"} 2
+gtfs_rt_schedule_trip_instances_total{agency_id_n="32",route_type_n="3",route_id_n="13543",matched="1"} 1
 # …
 
 # HELP gtfs_rt_feed_items_ages_seconds age (time until now) of each item (FeedEntity children) in the GTFS-RT feed that has a .timestamp
 # TYPE gtfs_rt_feed_items_ages_seconds summary
-gtfs_rt_feed_items_ages_seconds{quantile="0.01",kind="tu",agency_id_n="?",route_type_n="?",route_id_n="23945"} 158.8721
-gtfs_rt_feed_items_ages_seconds{quantile="0.05",kind="tu",agency_id_n="?",route_type_n="?",route_id_n="23945"} 254.87
-gtfs_rt_feed_items_ages_seconds{quantile="0.5",kind="tu",agency_id_n="?",route_type_n="?",route_id_n="23945"} 3652.2033333333334
-gtfs_rt_feed_items_ages_seconds{quantile="0.9",kind="tu",agency_id_n="?",route_type_n="?",route_id_n="23945"} 3829.875
-gtfs_rt_feed_items_ages_seconds{quantile="0.95",kind="tu",agency_id_n="?",route_type_n="?",route_id_n="23945"} 55591.87
-gtfs_rt_feed_items_ages_seconds{quantile="0.99",kind="tu",agency_id_n="?",route_type_n="?",route_id_n="23945"} 55783.874
-gtfs_rt_feed_items_ages_seconds{quantile="0.999",kind="tu",agency_id_n="?",route_type_n="?",route_id_n="23945"} 55816.875
-gtfs_rt_feed_items_ages_seconds_sum{kind="tu",agency_id_n="?",route_type_n="?",route_id_n="23945"} 993049.5359999982
-gtfs_rt_feed_items_ages_seconds_count{kind="tu",agency_id_n="?",route_type_n="?",route_id_n="23945"} 160
+gtfs_rt_feed_items_ages_seconds{quantile="0.01",kind="tu",agency_id_n="?",route_type_n="?",route_id_n="23944",matched="1"} 43073.176
+gtfs_rt_feed_items_ages_seconds{quantile="0.05",kind="tu",agency_id_n="?",route_type_n="?",route_id_n="23944",matched="1"} 43150.476
+gtfs_rt_feed_items_ages_seconds{quantile="0.5",kind="tu",agency_id_n="?",route_type_n="?",route_id_n="23944",matched="1"} 44625.176
+gtfs_rt_feed_items_ages_seconds{quantile="0.9",kind="tu",agency_id_n="?",route_type_n="?",route_id_n="23944",matched="1"} 69250.50933333335
+gtfs_rt_feed_items_ages_seconds{quantile="0.95",kind="tu",agency_id_n="?",route_type_n="?",route_id_n="23944",matched="1"} 71009.176
+gtfs_rt_feed_items_ages_seconds{quantile="0.99",kind="tu",agency_id_n="?",route_type_n="?",route_id_n="23944",matched="1"} 71009.176
+gtfs_rt_feed_items_ages_seconds{quantile="0.999",kind="tu",agency_id_n="?",route_type_n="?",route_id_n="23944",matched="1"} 71009.176
+gtfs_rt_feed_items_ages_seconds_sum{kind="tu",agency_id_n="?",route_type_n="?",route_id_n="23944",matched="1"} 542085.9359999999
+gtfs_rt_feed_items_ages_seconds_count{kind="tu",agency_id_n="?",route_type_n="?",route_id_n="23944",matched="1"} 11
+gtfs_rt_feed_items_ages_seconds{quantile="0.01",kind="tu",agency_id_n="731",route_type_n="100",route_id_n="16345",matched="1"} 34500.176
+gtfs_rt_feed_items_ages_seconds{quantile="0.05",kind="tu",agency_id_n="731",route_type_n="100",route_id_n="16345",matched="1"} 34500.176
+gtfs_rt_feed_items_ages_seconds{quantile="0.5",kind="tu",agency_id_n="731",route_type_n="100",route_id_n="16345",matched="1"} 44626.176
+gtfs_rt_feed_items_ages_seconds{quantile="0.9",kind="tu",agency_id_n="731",route_type_n="100",route_id_n="16345",matched="1"} 44628.176
+gtfs_rt_feed_items_ages_seconds{quantile="0.95",kind="tu",agency_id_n="731",route_type_n="100",route_id_n="16345",matched="1"} 44628.176
+gtfs_rt_feed_items_ages_seconds{quantile="0.99",kind="tu",agency_id_n="731",route_type_n="100",route_id_n="16345",matched="1"} 44628.176
+gtfs_rt_feed_items_ages_seconds{quantile="0.999",kind="tu",agency_id_n="731",route_type_n="100",route_id_n="16345",matched="1"} 44628.176
+gtfs_rt_feed_items_ages_seconds_sum{kind="tu",agency_id_n="731",route_type_n="100",route_id_n="16345",matched="1"} 123754.52799999999
+gtfs_rt_feed_items_ages_seconds_count{kind="tu",agency_id_n="731",route_type_n="100",route_id_n="16345",matched="1"} 3
 # …
-gtfs_rt_feed_items_ages_seconds{quantile="0.01",kind="tu",agency_id_n="?",route_type_n="?",route_id_n="4259_"} 794.875
-gtfs_rt_feed_items_ages_seconds{quantile="0.05",kind="tu",agency_id_n="?",route_type_n="?",route_id_n="4259_"} 794.875
-gtfs_rt_feed_items_ages_seconds{quantile="0.5",kind="tu",agency_id_n="?",route_type_n="?",route_id_n="4259_"} 794.875
-gtfs_rt_feed_items_ages_seconds{quantile="0.9",kind="tu",agency_id_n="?",route_type_n="?",route_id_n="4259_"} 794.875
-gtfs_rt_feed_items_ages_seconds{quantile="0.95",kind="tu",agency_id_n="?",route_type_n="?",route_id_n="4259_"} 794.875
-gtfs_rt_feed_items_ages_seconds{quantile="0.99",kind="tu",agency_id_n="?",route_type_n="?",route_id_n="4259_"} 794.875
-gtfs_rt_feed_items_ages_seconds{quantile="0.999",kind="tu",agency_id_n="?",route_type_n="?",route_id_n="4259_"} 794.875
-gtfs_rt_feed_items_ages_seconds_sum{kind="tu",agency_id_n="?",route_type_n="?",route_id_n="4259_"} 794.875
-gtfs_rt_feed_items_ages_seconds_count{kind="tu",agency_id_n="?",route_type_n="?",route_id_n="4259_"} 1
 
 # HELP gtfs_rt_matching_time_buffer_before_seconds Amount of time that Schedule trip instances can be in the past while still being matched with GTFS-RT entities.
 # TYPE gtfs_rt_matching_time_buffer_before_seconds gauge
