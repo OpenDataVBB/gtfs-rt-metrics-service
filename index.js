@@ -300,7 +300,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 				'route_type_n', // normalized route_type
 				'route_id_n', // normalized route_id
 			],
-			unmatchedSchedTripInstances.values().map(([tripDesc, _, kind]) => {
+			unmatchedSchedTripInstances.values().map(([tripDesc]) => {
 				const agency_id_n = normalizeAgencyIdForMetrics(tripDesc.agency_id)
 				const route_type_n = normalizeRouteTypeForMetrics(tripDesc.route_type)
 				const route_id_n = normalizeRouteIdForMetrics(tripDesc.route_id)
