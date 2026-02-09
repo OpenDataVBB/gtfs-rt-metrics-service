@@ -1,0 +1,3 @@
+[submodule "duckdb-gtfs-importer"]
+	path = duckdb-gtfs-importer
+	url = https://github.com/OpenDataVBB/duckdb-gtfs-importer.git
