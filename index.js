@@ -440,7 +440,10 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 			// Some fetch API errors are TypeErrors, but we don't want to throw them.
 			if (
 				isProgrammerError(err)
+				// fetch errors
 				&& !(err instanceof TypeError && err.code === 'ENOENT')
+				&& !(err instanceof TypeError && err.cause?.code === 'UND_ERR_CONNECT_TIMEOUT')
+				&& !(err instanceof TypeError && err.cause?.code === 'UND_ERR_BODY_TIMEOUT')
 			) {
 				throw err
 			}
