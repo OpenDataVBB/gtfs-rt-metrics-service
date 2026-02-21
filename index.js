@@ -252,6 +252,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 
 		if (!('entity' in feedMsg)) {
 			feedEntitiesTotal.set(0)
+			return;
 		}
 		ok(Array.isArray(feedMsg.entity), 'feedMsg.entity must be an array')
 		feedEntitiesTotal.set(feedMsg.entity.length)
