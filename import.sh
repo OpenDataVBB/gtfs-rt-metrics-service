@@ -37,7 +37,9 @@ if [ "${1:-}" = '--docker' ]; then
 		ghcr.io/opendatavbb/duckdb-gtfs-importer
 else
 	# run duckdb-gtfs-importer locally
-	task \
+	env \
+		PATH="$PWD/duckdb-gtfs-importer/node_modules/.bin:$PATH" \
+		task \
 		-t ./duckdb-gtfs-importer/Taskfile.yml \
 		-d gtfs
 fi
