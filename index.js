@@ -138,6 +138,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 		labelNames: [
 			// todo: by rt_feed_digest
 			'kind', // tu=TripUpdate, vp=VehiclePosition
+			'sched_rel', // TripDescriptor.ScheduleRelationship
 			'route_id_n', // normalized route_id
 			'matched', // 0 or 1
 		],
@@ -162,6 +163,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 		labelNames: [
 			// todo: by rt_feed_digest
 			'kind', // tu=TripUpdate, vp=VehiclePosition
+			'sched_rel', // TripDescriptor.ScheduleRelationship
 			'agency_id_n', // normalized agency_id, only if matched with Schedule trip instance
 			'route_type_n', // normalized route_type, only if matched with Schedule trip instance
 			'route_id_n', // normalized route_id
@@ -288,15 +290,17 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 		const _rtMetrics = countByLabels(
 			[
 				'kind', // tu=TripUpdate, vp=VehiclePosition
+				'sched_rel', // TripDescriptor.ScheduleRelationship
 				'route_id_n', // normalized route_id
 				'matched', // 0 or 1
 			],
 			rtTripInstances.map((tripInstance) => {
-				const [tripDesc, , kind] = tripInstance
+				const [tripDesc, feedItem, kind] = tripInstance
 				const matched = unmatchedRtTripInstances.has(tripInstance)
 				const route_id_n = normalizeRouteIdForMetrics(tripDesc.route_id ?? null)
 				return [
 					kind,
+					String(feedItem.trip?.schedule_relationship ?? '?'),
 					route_id_n,
 					matched ? '1' : '0',
 				]
@@ -345,6 +349,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 			const age = Number(BigInt(tFetch) - ts * BigInt(1000))
 			rtFeedItemsAgesSeconds.observe({
 				kind,
+				sched_rel: String(feedItem.trip?.schedule_relationship ?? '?'),
 				agency_id_n,
 				route_type_n,
 				route_id_n,
