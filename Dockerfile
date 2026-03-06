@@ -9,7 +9,10 @@ LABEL org.opencontainers.image.authors="Verkehrsverbund Berlin Brandenburg <info
 
 # install dependencies
 ADD package.json /app
-RUN npm install --production
+RUN \
+	--mount=type=cache,target=/tmp/node-compile-cache \
+	--mount=type=cache,target=/root/.npm \
+	npm install --production
 
 # add source code
 ADD . /app
