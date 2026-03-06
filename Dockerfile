@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM node:24-alpine
+FROM node:24-trixie-slim
 WORKDIR /app
 
 LABEL org.opencontainers.image.title="gtfs-rt-metrics-service"
