@@ -1,4 +1,5 @@
 {
+	"private": true,
 	"name": "gtfs-rt-metrics-service",
 	"description": "Consumes a GTFS Realtime (GTFS-RT) feed and serves metrics about it via HTTP.",
 	"version": "1.0.0",
