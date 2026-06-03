@@ -39,7 +39,7 @@
 		"node": ">=24"
 	},
 	"dependencies": {
-		"@duckdb/node-api": "^1.4.4-r.3",
+		"@duckdb/node-api": "1.5.3-r.3",
 		"gtfs-rt-bindings": "^4.9.0",
 		"gtfs-utils": "^5.1.0",
 		"lodash": "^4.17.21",
