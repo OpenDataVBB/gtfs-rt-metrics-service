@@ -448,6 +448,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 				isProgrammerError(err)
 				// fetch errors
 				&& !(err instanceof TypeError && err.code === 'ENOENT')
+				&& !(err instanceof TypeError && err.code === 'ECONNREFUSED')
 				&& !(err instanceof TypeError && err.cause?.code === 'UND_ERR_CONNECT_TIMEOUT')
 				&& !(err instanceof TypeError && err.cause?.code === 'UND_ERR_BODY_TIMEOUT')
 			) {
