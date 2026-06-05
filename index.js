@@ -500,6 +500,9 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 
 	const metricsServer = createMetricsServer({
 		serverPort: port,
+		checkHealth: async () => {
+			await gtfsDb.get('SELECT 1')
+		},
 	})
 	await metricsServer.start()
 	logger.info({
