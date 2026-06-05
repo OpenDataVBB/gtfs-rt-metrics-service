@@ -25,7 +25,7 @@ This project uses [duckdb-gtfs-importer](https://github.com/OpenDataVBB/duckdb-g
 
 ```
 Usage:
-    serve-gtfs-rt-from-nats [options] -- <gtfs-rt-url> ...
+    serve-gtfs-rt-metrics [options] -- <gtfs-rt-url> ...
 Options:
     --port                    -p  Port to serve the metrics on.
                                   Default: $PORT, otherwise 3000
@@ -43,7 +43,7 @@ Options:
                                   in seconds.
                                   Default: $GTFS_RT_MATCHING_TIME_BUFFER_AFTER, otherwise 10m.
 Examples:
-    serve-gtfs-rt-from-nats --port 1234 'https://example.org/gtfs-rt.pb'
+    serve-gtfs-rt-metrics --port 1234 'https://example.org/gtfs-rt.pb'
 ```
 
 ### metrics example
