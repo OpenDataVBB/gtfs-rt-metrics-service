@@ -51,11 +51,13 @@
 		"@eslint/js": "^9.0.0",
 		"eslint": "^9.0.0",
 		"globals": "^16.5.0",
-		"pino-pretty": "^13.1.2"
+		"pino-pretty": "^13.1.2",
+		"tinybench": "^6.0.2"
 	},
 	"scripts": {
 		"test": "./test/index.sh",
 		"lint": "eslint .",
+		"benchmark": "./benchmark/prepare.sh && ./benchmark/run.js",
 		"prepublishOnly": "npm run lint && npm test"
 	}
 }
