@@ -1,5 +1,3 @@
-import {fileURLToPath} from 'node:url'
-import {dirname} from 'node:path'
 import {
 	test,
 } from 'node:test'
@@ -7,8 +5,8 @@ import {
 	deepStrictEqual,
 } from 'node:assert/strict'
 import {
-	connectToGtfsDb,
-} from '../lib/gtfs-db.js'
+	connectToTestGtfsDb,
+} from './lib.js'
 import {
 	createDetermineTripsRtCoverage,
 } from '../lib/matching.js'
@@ -17,9 +15,7 @@ import feedMsg1 from './fixtures/flix-2026-01-09T00-35-05+01-00.gtfs-rt.js'
 const VEHICLE_POSITION = 'vp'
 const TRIP_UPDATE = 'tu'
 
-const gtfsDb = await connectToGtfsDb({
-	pathToDb: dirname(fileURLToPath(import.meta.url)) + '/fixtures/flix-2026-01-04.gtfs.duckdb',
-})
+const gtfsDb = await connectToTestGtfsDb('flix-2026-01-04.gtfs.duckdb')
 const {
 	determineTripsRtCoverage,
 } = createDetermineTripsRtCoverage({
