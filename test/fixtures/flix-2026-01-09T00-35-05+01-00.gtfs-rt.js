@@ -12,7 +12,7 @@ export default {
 				trip: {
 					trip_id: '2686-1-1400112025-BUF#6MT-00',
 					start_time: '14:00:00',
-					start_date: '20251126',
+					start_date: '20251126', // note: much older
 					schedule_relationship: 0,
 				},
 				stop_time_update: [

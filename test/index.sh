@@ -8,5 +8,6 @@ brotli -d -k fixtures/*.gtfs.duckdb.br
 
 node trip-descriptors-match.js
 node matching.js
+node metrics.js
 
 # todo

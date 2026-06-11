@@ -60,12 +60,14 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 	ok(Number.isInteger(port), 'cfg.port must be an integer')
 
 	const {
+		pathToGtfsDb,
 		matchingTimeBufferBefore, // milliseconds
 		matchingTimeBufferAfter, // milliseconds
 		normalizeAgencyIdForMetrics,
 		normalizeRouteIdForMetrics,
 		normalizeRouteTypeForMetrics,
 	} = {
+		pathToGtfsDb: null, // default: `$GTFS_IMPORTER_DB_PREFIX.gtfs.duckdb`
 		matchingTimeBufferBefore: 600_000, // 10 minutes
 		matchingTimeBufferAfter: 600_000, // 10 minutes
 		// keep cardinality low by normalizing, e.g. truncating, hashing
@@ -206,7 +208,9 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 
 		logger.trace('-- reconnecting to GTFS Schedule DB')
 		try {
-			pGtfsDb = connectToGtfsDb()
+			pGtfsDb = connectToGtfsDb({
+				pathToDb: pathToGtfsDb,
+			})
 			gtfsDb = await pGtfsDb
 		} finally {
 			pGtfsDb = null
@@ -515,7 +519,9 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 	}
 
 	return {
+		fetchAndProcessFeed,
 		stop,
+		metricsRegister, // todo [breaking]: rename to `metricsRegistry`?
 	}
 }
 
