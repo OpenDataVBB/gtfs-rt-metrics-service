@@ -221,6 +221,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 			gtfsDb,
 			timeBufferBefore: matchingTimeBufferBefore,
 			timeBufferAfter: matchingTimeBufferAfter,
+			determineSTUCoverage: false,
 		})
 		determineTripsRtCoverage = _detCov.determineTripsRtCoverage
 	}

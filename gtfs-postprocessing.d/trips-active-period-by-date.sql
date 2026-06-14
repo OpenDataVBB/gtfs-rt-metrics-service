@@ -29,6 +29,8 @@ WITH stop_times_based AS NOT MATERIALIZED (
 SELECT
 	"date",
 	trips.route_id,
+	routes.route_type,
+	routes.agency_id,
 	trips_start_end.*
 	EXCLUDE (
 		active_from,

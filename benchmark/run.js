@@ -70,6 +70,7 @@ benchmark.addEventListener('cycle', (ev) => {
 		gtfsDb,
 		timeBufferBefore: 3 * 60 * 1000, // 3 minutes
 		timeBufferAfter: 3 * 60 * 1000, // 3 minutes
+		determineSTUCoverage: false,
 	})
 
 	benchmark.add('determineTripsRtCoverage with 3m time buffer & FLIX 2026-01-09 GTFS-RT', async () => {
@@ -84,10 +85,26 @@ benchmark.addEventListener('cycle', (ev) => {
 		gtfsDb,
 		timeBufferBefore: 30 * 60 * 1000, // 30 minutes
 		timeBufferAfter: 30 * 60 * 1000, // 30 minutes
+		determineSTUCoverage: false,
 	})
 
 	benchmark.add('determineTripsRtCoverage with 30m time buffer & FLIX 2026-01-09 GTFS-RT', async () => {
 		await determineTripsRtCoverage30m(feedMsg1)
+	})
+}
+
+{
+	const {
+		determineTripsRtCoverage: determineTripsRtCoverage30mSTU,
+	} = createDetermineTripsRtCoverage({
+		gtfsDb,
+		timeBufferBefore: 30 * 60 * 1000, // 30 minutes
+		timeBufferAfter: 30 * 60 * 1000, // 30 minutes
+		determineSTUCoverage: true,
+	})
+
+	benchmark.add('determineTripsRtCoverage with 30m time buffer, STU coverage & FLIX 2026-01-09 GTFS-RT', async () => {
+		await determineTripsRtCoverage30mSTU(feedMsg1)
 	})
 }
 
