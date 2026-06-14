@@ -43,7 +43,7 @@ const serveGtfsRTAndFetchMetrics = async (cfg) => {
 		const {
 			stop: _stopMetricsServer,
 			fetchAndProcessFeed,
-			metricsRegister,
+			metricsRegistry,
 		} = await serveGtfsRtMetrics({
 			gtfsRtUrls: [
 				`http://localhost:${gtfsRtPort}/`,
@@ -59,7 +59,7 @@ const serveGtfsRTAndFetchMetrics = async (cfg) => {
 
 		await fetchAndProcessFeed()
 		// We don't even use the metrics HTTP server
-		return await metricsRegister.getMetricsAsJSON()
+		return await metricsRegistry.getMetricsAsJSON()
 	} finally {
 		await Promise.all([
 			stopGtfsRtServer(),
