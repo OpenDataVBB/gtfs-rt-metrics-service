@@ -82,8 +82,8 @@ test('correctly represents sample Flix 2026-01-09 GTFS-RT FeedMessage in metrics
 	// Additional Schedule trip instances without RT coverage:
 	// - trip_id `1922-5-0145012026-BM#BDX-00`, start_date 2026-01-08
 
-	const gtfs_rt_items_total = metrics.find(m => m.name === 'gtfs_rt_items_total')
-	deepStrictEqualMetricValues(gtfs_rt_items_total?.values, [
+	const gtfs_rt_items = metrics.find(m => m.name === 'gtfs_rt_items')
+	deepStrictEqualMetricValues(gtfs_rt_items?.values, [
 		// matched
 		{ // entity `N1153-1-0255012026-DO#AOS-00-position`
 			labels: {kind: 'vp', sched_rel: '0', matched: '1', route_id_n: 'N1153'},
@@ -104,8 +104,8 @@ test('correctly represents sample Flix 2026-01-09 GTFS-RT FeedMessage in metrics
 		},
 	])
 
-	const gtfs_rt_schedule_trip_instances_total = metrics.find(m => m.name === 'gtfs_rt_schedule_trip_instances_total')
-	deepStrictEqualMetricValues(gtfs_rt_schedule_trip_instances_total?.values, [
+	const gtfs_rt_schedule_trip_instances = metrics.find(m => m.name === 'gtfs_rt_schedule_trip_instances')
+	deepStrictEqualMetricValues(gtfs_rt_schedule_trip_instances?.values, [
 		// matched:
 		// - trip_id `N1153-1-0255012026-DO#AOS-00`
 		{
@@ -140,8 +140,8 @@ test('correctly represents matched/unmatched & skipped StopTimeUpdates in metric
 	//  	- 17 STs from stop_sequence = 11 until stop_sequence = 27
 	// - All 33 stop_times of Schedule trip instance trip_id = 1922-5-0145012026-BM#BDX-00, date = 2026-01-08
 
-	const gtfs_rt_stoptimeupdates_total = metrics.find(m => m.name === 'gtfs_rt_stoptimeupdates_total')
-	deepStrictEqualMetricValues(gtfs_rt_stoptimeupdates_total?.values, [
+	const gtfs_rt_stoptimeupdates = metrics.find(m => m.name === 'gtfs_rt_stoptimeupdates')
+	deepStrictEqualMetricValues(gtfs_rt_stoptimeupdates?.values, [
 		{
 			labels: {tu_sched_rel: '0', route_id_n: 'N1153', matched: '1', 'sched_rel': '1'},
 			value: 2,
