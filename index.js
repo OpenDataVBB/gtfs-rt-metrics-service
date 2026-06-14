@@ -94,8 +94,8 @@ const feedTimestampSeconds = new Gauge({
 		// todo: by rt_feed_digest
 	],
 })
-const feedEntitiesTotal = new Gauge({
-	name: 'gtfs_rt_feed_entities_total',
+const feedEntitiesMetric = new Gauge({
+	name: 'gtfs_rt_feed_entities',
 	help: 'number of entities in the GTFS-RT feed',
 	registers: [metricsRegistry],
 	labelNames: [
@@ -103,8 +103,8 @@ const feedEntitiesTotal = new Gauge({
 	],
 })
 
-const rtItemsTotal = new Gauge({
-	name: 'gtfs_rt_items_total',
+const rtItemsMetric = new Gauge({
+	name: 'gtfs_rt_items',
 	help: `number of items (FeedEntity children) in the GTFS-RT feed, by their matching result with the Schedule feed`,
 	registers: [metricsRegistry],
 	labelNames: [
@@ -115,8 +115,8 @@ const rtItemsTotal = new Gauge({
 		'matched', // 0 or 1
 	],
 })
-const scheduleTripInstancesTotal = new Gauge({
-	name: 'gtfs_rt_schedule_trip_instances_total',
+const scheduleTripInstancesMetric = new Gauge({
+	name: 'gtfs_rt_schedule_trip_instances',
 	help: `number of trip instances in the Schedule feed (within the time buffer), and if they have >=1 corresponding GTFS-RT items`,
 	registers: [metricsRegistry],
 	labelNames: [
@@ -324,11 +324,11 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 		}
 
 		if (!('entity' in feedMsg)) {
-			feedEntitiesTotal.set(0)
+			feedEntitiesMetric.set(0)
 			return;
 		}
 		ok(Array.isArray(feedMsg.entity), 'feedMsg.entity must be an array')
-		feedEntitiesTotal.set(feedMsg.entity.length)
+		feedEntitiesMetric.set(feedMsg.entity.length)
 
 		const {
 			activeSchedTripInstances,
@@ -365,7 +365,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 			}
 		}
 
-		const _rtMetrics = countByLabels(
+		const _rtItemsMetricValues = countByLabels(
 			[
 				'kind', // tu=TripUpdate, vp=VehiclePosition
 				'sched_rel', // TripDescriptor.ScheduleRelationship
@@ -386,11 +386,11 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 				]
 			}),
 		)
-		for (const [labels, count] of _rtMetrics) {
-			rtItemsTotal.set(labels, count)
+		for (const [labels, count] of _rtItemsMetricValues) {
+			rtItemsMetric.set(labels, count)
 		}
 
-		const _scheduleMetrics = countByLabels(
+		const _scheduleTripInstancesMetricValues = countByLabels(
 			[
 				'agency_id_n', // normalized agency_id
 				'route_type_n', // normalized route_type
@@ -411,8 +411,8 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 				]
 			}),
 		)
-		for (const [labels, count] of _scheduleMetrics) {
-			scheduleTripInstancesTotal.set(labels, count)
+		for (const [labels, count] of _scheduleTripInstancesMetricValues) {
+			scheduleTripInstancesMetric.set(labels, count)
 		}
 
 		for (const [tripDesc, feedItem, kind] of rtTripInstances.values()) {
