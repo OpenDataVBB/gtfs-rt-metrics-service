@@ -38,6 +38,19 @@ const INCREMENTALITY_FULL_DATASET = 0
 // https://gtfs.org/documentation/realtime/proto/
 const TU_SCHEDULE_RELATIONSHIP_SCHEDULED = 0
 
+// > // The relation between the StopTimeEvents and the static schedule.
+// > enum ScheduleRelationship {
+// > 	// The vehicle is proceeding in accordance with its static schedule of
+// > 	// stops, although not necessarily according to the times of the schedule.
+// > 	// At least one of arrival and departure must be provided. If the schedule
+// > 	// for this stop contains both arrival and departure times then so must
+// > 	// this update. Frequency-based trips (GTFS frequencies.txt with exact_times = 0)
+// > 	// should not have a SCHEDULED value and should use UNSCHEDULED instead.
+// > 	SCHEDULED = 0;
+// > }
+// https://gtfs.org/documentation/realtime/proto/
+const STU_SCHEDULE_RELATIONSHIP_SCHEDULED = 0
+
 const feedSize = new Gauge({
 	name: 'gtfs_rt_feed_size_raw_bytes',
 	help: 'size of the final GTFS-RT feed (uncompressed)',
@@ -434,7 +447,9 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 						String(tripUpdate.schedule_relationship ?? TU_SCHEDULE_RELATIONSHIP_SCHEDULED), // tu_sched_rel
 						route_id_n,
 						stuMatchStatus[i] ? '1' : '0', // matched
-						String(stu.schedule_relationship ?? '?'), // sched_rel
+						// > The default relationship is SCHEDULED.
+						// https://gtfs.org/documentation/realtime/reference/#message-stoptimeupdate
+						String(stu.schedule_relationship ?? STU_SCHEDULE_RELATIONSHIP_SCHEDULED), // sched_rel
 					])
 				}),
 			)
