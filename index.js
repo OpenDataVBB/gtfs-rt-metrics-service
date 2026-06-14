@@ -38,6 +38,137 @@ const INCREMENTALITY_FULL_DATASET = 0
 // https://gtfs.org/documentation/realtime/proto/
 const TU_SCHEDULE_RELATIONSHIP_SCHEDULED = 0
 
+const feedSize = new Gauge({
+	name: 'gtfs_rt_feed_size_raw_bytes',
+	help: 'size of the final GTFS-RT feed (uncompressed)',
+	registers: [metricsRegister],
+	labelNames: [
+		// todo: by rt_feed_digest
+	],
+})
+// todo: last-modified timestamp
+const fetchTime = new Summary({
+	name: 'gtfs_rt_fetch_time_seconds',
+	help: 'time needed to fetch the GTFS-RT feed',
+	registers: [metricsRegister],
+	labelNames: [
+		// todo: by rt_feed_digest
+	],
+})
+const processingTime = new Summary({
+	name: 'gtfs_rt_processing_time_seconds',
+	help: 'time needed to process the GTFS-RT feed',
+	registers: [metricsRegister],
+	labelNames: [
+		// todo: by rt_feed_digest
+	],
+})
+const feedFetchesTotal = new Counter({
+	name: 'gtfs_rt_feed_fetches_total',
+	help: 'how often the GTFS-RT feed has been fetched & processed',
+	registers: [metricsRegister],
+	labelNames: [
+		// todo: by rt_feed_digest
+		'status', // success_changed, success_unchanged, fetch_failure, parse_failure, processing_failure
+	],
+})
+
+const feedTimestampSeconds = new Gauge({
+	name: 'gtfs_rt_feed_timestamp_seconds',
+	help: 'GTFS-RT FeedHeader.timestamp, if present',
+	registers: [metricsRegister],
+	labelNames: [
+		// todo: by rt_feed_digest
+	],
+})
+const feedEntitiesTotal = new Gauge({
+	name: 'gtfs_rt_feed_entities_total',
+	help: 'number of entities in the GTFS-RT feed',
+	registers: [metricsRegister],
+	labelNames: [
+		// todo: by rt_feed_digest
+	],
+})
+
+const rtItemsTotal = new Gauge({
+	name: 'gtfs_rt_items_total',
+	help: `number of items (FeedEntity children) in the GTFS-RT feed, by their matching result with the Schedule feed`,
+	registers: [metricsRegister],
+	labelNames: [
+		// todo: by rt_feed_digest
+		'kind', // tu=TripUpdate, vp=VehiclePosition
+		'sched_rel', // TripDescriptor.ScheduleRelationship
+		'route_id_n', // normalized route_id
+		'matched', // 0 or 1
+	],
+})
+const scheduleTripInstancesTotal = new Gauge({
+	name: 'gtfs_rt_schedule_trip_instances_total',
+	help: `number of trip instances in the Schedule feed (within the time buffer), and if they have >=1 corresponding GTFS-RT items`,
+	registers: [metricsRegister],
+	labelNames: [
+		// todo: by rt_feed_digest
+		'agency_id_n', // normalized agency_id
+		'route_type_n', // normalized route_type
+		'route_id_n', // normalized route_id
+		'matched', // 0 or 1
+	],
+})
+
+const rtFeedItemsAgesSeconds = new Summary({
+	name: 'gtfs_rt_feed_items_ages_seconds',
+	help: `age (time until now) of each item (FeedEntity children) in the GTFS-RT feed that has a .timestamp`,
+	registers: [metricsRegister],
+	labelNames: [
+		// todo: by rt_feed_digest
+		'kind', // tu=TripUpdate, vp=VehiclePosition
+		'sched_rel', // TripDescriptor.ScheduleRelationship
+		'agency_id_n', // normalized agency_id, only if matched with Schedule trip instance
+		'route_type_n', // normalized route_type, only if matched with Schedule trip instance
+		'route_id_n', // normalized route_id
+		'matched', // 0 or 1
+	],
+})
+
+// StopTimeUpdate-/stop_time-based metrics
+const rtSTUsMetric = new Gauge({
+	name: 'gtfs_rt_stoptimeupdates',
+	help: `number of StopTimeUpdates (TripUpdate children) in the GTFS-RT feed, by their matching result with the Schedule feed`,
+	registers: [metricsRegister],
+	labelNames: [
+		// todo: by rt_feed_digest
+		'tu_sched_rel', // TripDescriptor.ScheduleRelationship
+		// todo: tu_matched?
+		'route_id_n', // normalized route_id
+		'matched', // 0 or 1
+		'sched_rel', // StopTimeUpdate.ScheduleRelationship
+	],
+})
+const scheduleStopTimesMetric = new Gauge({
+	name: 'gtfs_rt_schedule_stoptimes',
+	help: `number of stop_times across all schedule trip instances (within the time buffer) in the Schedule feed, by their matching result with the GTFS-RT feed`,
+	registers: [metricsRegister],
+	labelNames: [
+		// // todo: by rt_feed_digest
+		'agency_id_n', // normalized agency_id
+		'route_type_n', // normalized route_type
+		'route_id_n', // normalized route_id
+		// todo: trip_inst_matched?
+		'matched', // Schedule stop_time matched? – 0 or 1
+	],
+})
+
+const matchingTimeBufferBeforeSeconds = new Gauge({
+	name: 'gtfs_rt_matching_time_buffer_before_seconds',
+	help: 'Amount of time that Schedule trip instances can be in the past while still being matched with GTFS-RT entities.',
+	registers: [metricsRegister],
+})
+const matchingTimeBufferAfterSeconds = new Gauge({
+	name: 'gtfs_rt_matching_time_buffer_after_seconds',
+	help: 'Amount of time that Schedule trip instances can be in the future while still being matched with GTFS-RT entities.',
+	registers: [metricsRegister],
+})
+
 class FeedProcessingError extends Error {}
 
 const serveGtfsRtMetrics = async (cfg, opt = {}) => {
@@ -93,137 +224,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 	const logger = createLogger('service')
 	const feedLogger = createLogger('feed')
 
-	const feedSize = new Gauge({
-		name: 'gtfs_rt_feed_size_raw_bytes',
-		help: 'size of the final GTFS-RT feed (uncompressed)',
-		registers: [metricsRegister],
-		labelNames: [
-			// todo: by rt_feed_digest
-		],
-	})
-	// todo: last-modified timestamp
-	const fetchTime = new Summary({
-		name: 'gtfs_rt_fetch_time_seconds',
-		help: 'time needed to fetch the GTFS-RT feed',
-		registers: [metricsRegister],
-		labelNames: [
-			// todo: by rt_feed_digest
-		],
-	})
-	const processingTime = new Summary({
-		name: 'gtfs_rt_processing_time_seconds',
-		help: 'time needed to process the GTFS-RT feed',
-		registers: [metricsRegister],
-		labelNames: [
-			// todo: by rt_feed_digest
-		],
-	})
-	const feedFetchesTotal = new Counter({
-		name: 'gtfs_rt_feed_fetches_total',
-		help: 'how often the GTFS-RT feed has been fetched & processed',
-		registers: [metricsRegister],
-		labelNames: [
-			// todo: by rt_feed_digest
-			'status', // success_changed, success_unchanged, fetch_failure, parse_failure, processing_failure
-		],
-	})
-
-	const feedTimestampSeconds = new Gauge({
-		name: 'gtfs_rt_feed_timestamp_seconds',
-		help: 'GTFS-RT FeedHeader.timestamp, if present',
-		registers: [metricsRegister],
-		labelNames: [
-			// todo: by rt_feed_digest
-		],
-	})
-	const feedEntitiesTotal = new Gauge({
-		name: 'gtfs_rt_feed_entities_total',
-		help: 'number of entities in the GTFS-RT feed',
-		registers: [metricsRegister],
-		labelNames: [
-			// todo: by rt_feed_digest
-		],
-	})
-
-	const rtItemsTotal = new Gauge({
-		name: 'gtfs_rt_items_total',
-		help: `number of items (FeedEntity children) in the GTFS-RT feed, by their matching result with the Schedule feed`,
-		registers: [metricsRegister],
-		labelNames: [
-			// todo: by rt_feed_digest
-			'kind', // tu=TripUpdate, vp=VehiclePosition
-			'sched_rel', // TripDescriptor.ScheduleRelationship
-			'route_id_n', // normalized route_id
-			'matched', // 0 or 1
-		],
-	})
-	const scheduleTripInstancesTotal = new Gauge({
-		name: 'gtfs_rt_schedule_trip_instances_total',
-		help: `number of trip instances in the Schedule feed, and if they have >=1 corresponding GTFS-RT items`,
-		registers: [metricsRegister],
-		labelNames: [
-			// todo: by rt_feed_digest
-			'agency_id_n', // normalized agency_id
-			'route_type_n', // normalized route_type
-			'route_id_n', // normalized route_id
-			'matched', // 0 or 1
-		],
-	})
-
-	const rtFeedItemsAgesSeconds = new Summary({
-		name: 'gtfs_rt_feed_items_ages_seconds',
-		help: `age (time until now) of each item (FeedEntity children) in the GTFS-RT feed that has a .timestamp`,
-		registers: [metricsRegister],
-		labelNames: [
-			// todo: by rt_feed_digest
-			'kind', // tu=TripUpdate, vp=VehiclePosition
-			'sched_rel', // TripDescriptor.ScheduleRelationship
-			'agency_id_n', // normalized agency_id, only if matched with Schedule trip instance
-			'route_type_n', // normalized route_type, only if matched with Schedule trip instance
-			'route_id_n', // normalized route_id
-			'matched', // 0 or 1
-		],
-	})
-
-	// StopTimeUpdate-/stop_time-based metrics
-	const rtSTUsMetric = new Gauge({
-		name: 'gtfs_rt_stoptimeupdates',
-		help: `number of StopTimeUpdates (TripUpdate children) in the GTFS-RT feed, by their matching result with the Schedule feed`,
-		registers: [metricsRegister],
-		labelNames: [
-			// todo: by rt_feed_digest
-			'tu_sched_rel', // TripDescriptor.ScheduleRelationship
-			// todo: tu_matched?
-			'route_id_n', // normalized route_id
-			'matched', // 0 or 1
-			'sched_rel', // StopTimeUpdate.ScheduleRelationship
-		],
-	})
-	const scheduleStopTimesMetric = new Gauge({
-		name: 'gtfs_rt_schedule_stoptimes',
-		help: `number of stop_times across all schedule trip instances (within the time buffer) in the Schedule feed, by their matching result with the GTFS-RT feed`,
-		registers: [metricsRegister],
-		labelNames: [
-			// // todo: by rt_feed_digest
-			'agency_id_n', // normalized agency_id
-			'route_type_n', // normalized route_type
-			'route_id_n', // normalized route_id
-			// todo: trip_inst_matched?
-			'matched', // Schedule stop_time matched? – 0 or 1
-		],
-	})
-
-	const matchingTimeBufferBeforeSeconds = new Gauge({
-		name: 'gtfs_rt_matching_time_buffer_before_seconds',
-		help: 'Amount of time that Schedule trip instances can be in the past while still being matched with GTFS-RT entities.',
-		registers: [metricsRegister],
-	})
 	matchingTimeBufferBeforeSeconds.set(matchingTimeBufferBefore / 1000)
-	const matchingTimeBufferAfterSeconds = new Gauge({
-		name: 'gtfs_rt_matching_time_buffer_after_seconds',
-		help: 'Amount of time that Schedule trip instances can be in the future while still being matched with GTFS-RT entities.',
-		registers: [metricsRegister],
-	})
 	matchingTimeBufferAfterSeconds.set(matchingTimeBufferAfter / 1000)
 
 	let determineTripsRtCoverage
