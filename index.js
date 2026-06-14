@@ -10,6 +10,7 @@ import {
 } from './lib/gtfs-db.js'
 import {
 	createDetermineTripsRtCoverage,
+	KIND_TRIP_UPDATE,
 } from './lib/matching.js'
 import {createMetricsServer, register as metricsRegister} from './lib/metrics.js'
 import {
@@ -27,6 +28,15 @@ import {
 // > }
 // https://gtfs.org/documentation/realtime/proto/
 const INCREMENTALITY_FULL_DATASET = 0
+
+// > enum ScheduleRelationship {
+// > 	// Trip that is running in accordance with its GTFS schedule, or is close
+// > 	// enough to the scheduled trip to be associated with it.
+// > 	SCHEDULED = 0;
+// > 	[…]
+// > }
+// https://gtfs.org/documentation/realtime/proto/
+const TU_SCHEDULE_RELATIONSHIP_SCHEDULED = 0
 
 class FeedProcessingError extends Error {}
 
@@ -66,6 +76,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 		normalizeAgencyIdForMetrics,
 		normalizeRouteIdForMetrics,
 		normalizeRouteTypeForMetrics,
+		determineSTUCoverage,
 	} = {
 		pathToGtfsDb: null, // default: `$GTFS_IMPORTER_DB_PREFIX.gtfs.duckdb`
 		matchingTimeBufferBefore: 600_000, // 10 minutes
@@ -75,6 +86,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 		normalizeAgencyIdForMetrics: defaultNormalizeAgencyIdForMetrics,
 		normalizeRouteIdForMetrics: defaultNormalizeRouteIdForMetrics,
 		normalizeRouteTypeForMetrics: defaultNormalizeRouteTypeForMetrics,
+		determineSTUCoverage: false,
 		...opt,
 	}
 
@@ -173,6 +185,34 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 		],
 	})
 
+	// StopTimeUpdate-/stop_time-based metrics
+	const rtSTUsMetric = new Gauge({
+		name: 'gtfs_rt_stoptimeupdates',
+		help: `number of StopTimeUpdates (TripUpdate children) in the GTFS-RT feed, by their matching result with the Schedule feed`,
+		registers: [metricsRegister],
+		labelNames: [
+			// todo: by rt_feed_digest
+			'tu_sched_rel', // TripDescriptor.ScheduleRelationship
+			// todo: tu_matched?
+			'route_id_n', // normalized route_id
+			'matched', // 0 or 1
+			'sched_rel', // StopTimeUpdate.ScheduleRelationship
+		],
+	})
+	const scheduleStopTimesMetric = new Gauge({
+		name: 'gtfs_rt_schedule_stoptimes',
+		help: `number of stop_times across all schedule trip instances (within the time buffer) in the Schedule feed, by their matching result with the GTFS-RT feed`,
+		registers: [metricsRegister],
+		labelNames: [
+			// // todo: by rt_feed_digest
+			'agency_id_n', // normalized agency_id
+			'route_type_n', // normalized route_type
+			'route_id_n', // normalized route_id
+			// todo: trip_inst_matched?
+			'matched', // Schedule stop_time matched? – 0 or 1
+		],
+	})
+
 	const matchingTimeBufferBeforeSeconds = new Gauge({
 		name: 'gtfs_rt_matching_time_buffer_before_seconds',
 		help: 'Amount of time that Schedule trip instances can be in the past while still being matched with GTFS-RT entities.',
@@ -221,7 +261,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 			gtfsDb,
 			timeBufferBefore: matchingTimeBufferBefore,
 			timeBufferAfter: matchingTimeBufferAfter,
-			determineSTUCoverage: false,
+			determineSTUCoverage,
 		})
 		determineTripsRtCoverage = _detCov.determineTripsRtCoverage
 	}
@@ -270,6 +310,9 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 			rtTripInstances,
 			// unmatchedRtTripInstances,
 			unmatchedSchedTripInstances,
+			// empty if `!determineSTUCoverage`
+			stopTimeUpdateMatchStatusByRtTripDesc,
+			stopTimeMatchStatusBySchedTripDesc,
 		} = await determineTripsRtCoverage(feedMsg)
 
 		const _getSchedTripInstanceLabels = (rtTripDesc) => {
@@ -366,6 +409,62 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 				route_id_n,
 				matched,
 			}, age / 1000)
+		}
+
+		if (determineSTUCoverage) {
+			const _rtSTUsMetricValues = countByLabels(
+				[
+					'tu_sched_rel', // TripDescriptor.ScheduleRelationship
+					'route_id_n', // normalized route_id
+					'matched', // 0 or 1
+					'sched_rel', // StopTimeUpdate.ScheduleRelationship
+				],
+				rtTripInstances
+				.filter(([_, __, kind]) => kind === KIND_TRIP_UPDATE)
+				.filter(([tripDesc]) => stopTimeUpdateMatchStatusByRtTripDesc.has(tripDesc))
+				.flatMap((tripInstance) => {
+					const [tripDesc, tripUpdate] = tripInstance
+					const {
+						route_id_n,
+					} = _getSchedTripInstanceLabels(tripDesc)
+
+					const stuMatchStatus = stopTimeUpdateMatchStatusByRtTripDesc.get(tripDesc)
+					return tripUpdate.stop_time_update.map((stu, i) => [
+						String(tripUpdate.schedule_relationship ?? TU_SCHEDULE_RELATIONSHIP_SCHEDULED), // tu_sched_rel
+						route_id_n,
+						stuMatchStatus[i] ? '1' : '0', // matched
+						String(stu.schedule_relationship ?? '?'), // sched_rel
+					])
+				}),
+			)
+			for (const [labels, count] of _rtSTUsMetricValues) {
+				rtSTUsMetric.set(labels, count)
+			}
+
+			const _schedSTsMetricValues = countByLabels(
+				[
+					'agency_id_n', // normalized agency_id
+					'route_type_n', // normalized route_type
+					'route_id_n', // normalized route_id
+					'matched', // Schedule stop_time matched? – 0 or 1
+				],
+				activeSchedTripInstances
+				.flatMap((tripInstance) => {
+					const [tripDesc] = tripInstance
+
+					const stMatchStatus = stopTimeMatchStatusBySchedTripDesc.get(tripDesc)
+					ok(Array.isArray(stMatchStatus, `${JSON.stringify(tripDesc)} has no stop_times match status`))
+					return tripDesc.stop_sequences.map((_, i) => [
+						normalizeAgencyIdForMetrics(tripDesc.agency_id), // agency_id_n
+						normalizeRouteTypeForMetrics(tripDesc.route_type), // route_type_n
+						normalizeRouteIdForMetrics(tripDesc.route_id), // route_id_n
+						stMatchStatus[i] ? '1' : '0', // matched
+					])
+				}),
+			)
+			for (const [labels, count] of _schedSTsMetricValues) {
+				scheduleStopTimesMetric.set(labels, count)
+			}
 		}
 	}
 
