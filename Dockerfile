@@ -27,6 +27,8 @@ RUN ./cli.js --help >/dev/null
 
 ENV PORT=3000
 
+EXPOSE $PORT
+
 HEALTHCHECK --interval=10s --timeout=3s --start-interval=3s \
 	CMD curl -fsS http://localhost:$PORT/health
 
