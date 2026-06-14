@@ -13,6 +13,9 @@ import {
 	deepStrictEqualMetricValues,
 } from './lib.js'
 import feedMsgFlix20260109 from './fixtures/flix-2026-01-09T00-35-05+01-00.gtfs-rt.js'
+import {
+	stuSchedRelSkipped1,
+} from './fixtures/flix-N1153-stu-sched-rel.gtfs-rt.js'
 
 const encodeGtfsRtFeedMsg = (feedMsg) => {
 	FeedMessage.verify(feedMsg)
@@ -22,6 +25,7 @@ const encodeGtfsRtFeedMsg = (feedMsg) => {
 const serveGtfsRTAndFetchMetrics = async (cfg) => {
 	const {
 		feedBuf,
+		serveGtfsRtMetricsOpts,
 	} = cfg
 
 	const gtfsRtPort = Math.round(30_000 + Math.random() * 9999)
@@ -49,6 +53,7 @@ const serveGtfsRTAndFetchMetrics = async (cfg) => {
 			port: metricsPort,
 		}, {
 			pathToGtfsDb: getPathToTestGtfsDb('flix-2026-01-04.gtfs.duckdb'),
+			...serveGtfsRtMetricsOpts,
 		})
 		stopMetricsServer = _stopMetricsServer
 
@@ -66,6 +71,7 @@ const serveGtfsRTAndFetchMetrics = async (cfg) => {
 test('correctly represents sample Flix 2026-01-09 GTFS-RT FeedMessage in metrics', async () => {
 	const metrics = await serveGtfsRTAndFetchMetrics({
 		feedBuf: encodeGtfsRtFeedMsg(feedMsgFlix20260109),
+		serveGtfsRtMetricsOpts: {},
 	})
 
 	// Should be matched:
@@ -111,6 +117,50 @@ test('correctly represents sample Flix 2026-01-09 GTFS-RT FeedMessage in metrics
 		{
 			labels: {agency_id_n: 'FLI', route_type_n: '3', route_id_n: '1922', matched: '0'},
 			value: 1,
+		},
+	])
+})
+
+test('correctly represents matched/unmatched & skipped StopTimeUpdates in metrics', async () => {
+	const metrics = await serveGtfsRTAndFetchMetrics({
+		feedBuf: encodeGtfsRtFeedMsg(stuSchedRelSkipped1),
+		serveGtfsRtMetricsOpts: {
+			determineSTUCoverage: true,
+		},
+	})
+
+	// Should be matched:
+	// - 2 StopTimeUpdates in feed entity `N1153-stu-sched-rel-skipped-1`'s TripUpdate:
+	//  	- 1st STU: stop_sequence = 3, schedule_relationship = 1/SKIPPED
+	//  	- 2nd STU: stop_sequence = 10, schedule_relationship = 1/SKIPPED
+	// Should *not* be matched:
+	// - 23 stop_times of Schedule trip instance trip_id = N1153-1-0255012026-DO#AOS-00, date = 2026-01-08:
+	//  	- 2 STs with stop_sequence = 1 & stop_sequence = 2
+	//  	- 6 STs from stop_sequence = 4 until stop_sequence = 9
+	//  	- 17 STs from stop_sequence = 11 until stop_sequence = 27
+	// - All 33 stop_times of Schedule trip instance trip_id = 1922-5-0145012026-BM#BDX-00, date = 2026-01-08
+
+	const gtfs_rt_stoptimeupdates_total = metrics.find(m => m.name === 'gtfs_rt_stoptimeupdates_total')
+	deepStrictEqualMetricValues(gtfs_rt_stoptimeupdates_total?.values, [
+		{
+			labels: {tu_sched_rel: '0', route_id_n: 'N1153', matched: '1', 'sched_rel': '1'},
+			value: 2,
+		},
+	])
+
+	const gtfs_rt_schedule_stoptimeupdates_total = metrics.find(m => m.name === 'gtfs_rt_schedule_stoptimeupdates_total')
+	deepStrictEqualMetricValues(gtfs_rt_schedule_stoptimeupdates_total?.values, [
+		{
+			labels: {agency_id_n: 'FLI', route_type_n: '3', route_id_n: 'N1153', matched: '1'},
+			value: 2,
+		},
+		{
+			labels: {agency_id_n: 'FLI', route_type_n: '3', route_id_n: 'N1153', matched: '0'},
+			value: 2 + 6 + 17,
+		},
+		{
+			labels: {agency_id_n: 'FLI', route_type_n: '3', route_id_n: '1922', matched: '0'},
+			value: 33,
 		},
 	])
 })
