@@ -34,6 +34,9 @@ const {
 		'matching-time-buffer-after': {
 			type: 'string',
 		},
+		'with-stu-overage': {
+			type: 'boolean',
+		},
 	},
 	allowPositionals: true,
 })
@@ -58,6 +61,8 @@ Options:
                                   that will be (or are) active later than now,
                                   in seconds.
                                   Default: $GTFS_RT_MATCHING_TIME_BUFFER_AFTER, otherwise 10m.
+    --with-stu-overage            Also compute which GTFS-RT StopTimeUpdates have a matching
+                                  Schedule stop_time, and vice versa.
 Examples:
     serve-gtfs-rt-metrics --port 1234 'https://example.org/gtfs-rt.pb'
 \n`)
@@ -115,6 +120,10 @@ if ('matching-time-buffer-after' in flags) {
 	opt.matchingTimeBufferAfter = parseInt(process.env.GTFS_RT_MATCHING_TIME_BUFFER_AFTER) * 1000
 } else {
 	opt.matchingTimeBufferAfter = 600_000 // 10 minutes
+}
+
+if ('with-stu-overage' in flags) {
+	opt.determineSTUCoverage = Boolean(flags['with-stu-overage'])
 }
 
 // todo: allow setting additional headers & fetch options
