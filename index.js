@@ -183,6 +183,20 @@ const scheduleStopTimesMetric = new Gauge({
 	],
 })
 
+const scheduleFeedImportedAt = new Gauge({
+	name: 'gtfs_rt_schedule_data_imported_at',
+	help: `When the GTFS Schedule data has been imported, and the feed's digest & feed_info.feed_version`,
+	registers: [metricsRegistry],
+	labelNames: [
+		// these follow the "GTFS-RT Multiple Feed Variants" draft spec (https://gist.github.com/derhuerst/f0b6c9cf28b90746770464eb8e5b918f)
+		// > A sequence of characters that uniquely identifies [3] the Schedule feed variant. It is formed by the first 4 bytes (8 characters) of the dataset's SHA2-256 a.k.a. SHA256 digest in hexadecimal notation.
+		'feed_digest',
+		// > The feed_version value in feed_info.txt of the Schedule feed variant.
+		// Normalized: first 3 characters only, to keep the metric's cardinality low.
+		'feed_version_n',
+	],
+})
+
 const matchingTimeBufferBeforeSeconds = new Gauge({
 	name: 'gtfs_rt_matching_time_buffer_before_seconds',
 	help: 'Amount of time that Schedule trip instances can be in the past while still being matched with GTFS-RT entities.',
@@ -252,6 +266,39 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 	matchingTimeBufferBeforeSeconds.set(matchingTimeBufferBefore / 1000)
 	matchingTimeBufferAfterSeconds.set(matchingTimeBufferAfter / 1000)
 
+	const fetchScheduleFeedMetadataMetrics = async () => {
+		let feed_version_n = '?'
+		const [{has_feed_version}] = await gtfsDb.get(`\
+			SELECT
+				count(*) > 0 AS has_feed_version
+			FROM information_schema.columns
+			WHERE table_name = 'feed_info'
+			AND column_name = 'feed_version'
+		`)
+		if (has_feed_version) {
+			const [{feed_version}] = await gtfsDb.get(`\
+				SELECT
+					feed_version
+				FROM feed_info
+				LIMIT 1
+			`)
+			feed_version_n = (feed_version ?? '?').slice(0, 3)
+		}
+
+		const [{
+			imported_at,
+			feed_digest,
+		}] = await gtfsDb.get(`\
+			SELECT
+				date_part('epoch', gtfs_data_imported_at()) AS imported_at,
+				gtfs_feed_digest() AS feed_digest
+		`)
+		scheduleFeedImportedAt.set({
+			feed_digest,
+			feed_version_n,
+		}, imported_at)
+	}
+
 	let determineTripsRtCoverage
 
 	let pGtfsDb = null
@@ -290,6 +337,8 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 			determineSTUCoverage,
 		})
 		determineTripsRtCoverage = _detCov.determineTripsRtCoverage
+
+		await fetchScheduleFeedMetadataMetrics()
 	}
 	await _reconnectGtfsDb()
 

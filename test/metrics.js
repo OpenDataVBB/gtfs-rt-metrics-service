@@ -68,6 +68,24 @@ const serveGtfsRTAndFetchMetrics = async (cfg) => {
 	}
 }
 
+test('exposes Schedule feed metadata in metrics', async () => {
+	const metrics = await serveGtfsRTAndFetchMetrics({
+		feedBuf: encodeGtfsRtFeedMsg(feedMsgFlix20260109), // todo: use empty FeedMessage?
+		serveGtfsRtMetricsOpts: {},
+	})
+
+	const imported_at = metrics.find(m => m.name === 'gtfs_rt_schedule_data_imported_at')
+	deepStrictEqualMetricValues(imported_at?.values, [
+		{
+			labels: {
+				feed_digest: 'a1b2c3d4',
+				feed_version_n: '?', // not stored in test DB
+			},
+			value: 1767983333.405, // 2026-01-09T19:28:53.405+01:00
+		},
+	])
+})
+
 test('correctly represents sample Flix 2026-01-09 GTFS-RT FeedMessage in metrics', async () => {
 	const metrics = await serveGtfsRTAndFetchMetrics({
 		feedBuf: encodeGtfsRtFeedMsg(feedMsgFlix20260109),
