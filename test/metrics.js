@@ -12,6 +12,7 @@ import {
 	getPathToTestGtfsDb,
 	deepStrictEqualMetricValues,
 } from './lib.js'
+// FeedHeader.timestamp is `1767915306` (2026-01-09T00:35:06+01:00).
 import feedMsgFlix20260109 from './fixtures/flix-2026-01-09T00-35-05+01-00.gtfs-rt.js'
 import {
 	stuSchedRelSkipped1,
@@ -107,6 +108,7 @@ test('correctly represents sample Flix 2026-01-09 GTFS-RT FeedMessage in metrics
 			labels: {
 				kind: 'vp',
 				sched_rel: '0',
+				sched_running: '1',
 				matched: '1',
 				route_id_n: 'N1153',
 			},
@@ -116,6 +118,7 @@ test('correctly represents sample Flix 2026-01-09 GTFS-RT FeedMessage in metrics
 			labels: {
 				kind: 'tu',
 				sched_rel: '0',
+				sched_running: '1',
 				matched: '1',
 				route_id_n: 'N1153',
 			},
@@ -126,6 +129,7 @@ test('correctly represents sample Flix 2026-01-09 GTFS-RT FeedMessage in metrics
 			labels: {
 				kind: 'tu',
 				sched_rel: '0',
+				sched_running: '0',
 				matched: '0',
 				route_id_n: '?',
 			},
@@ -135,6 +139,7 @@ test('correctly represents sample Flix 2026-01-09 GTFS-RT FeedMessage in metrics
 			labels: {
 				kind: 'vp',
 				sched_rel: '0',
+				sched_running: '0',
 				matched: '0',
 				route_id_n: '?',
 			},
@@ -152,6 +157,7 @@ test('correctly represents sample Flix 2026-01-09 GTFS-RT FeedMessage in metrics
 				route_type_n: '3',
 				route_id_n: 'N1153',
 				matched: '1',
+				running: '1',
 			},
 			value: 1,
 		},
@@ -163,6 +169,7 @@ test('correctly represents sample Flix 2026-01-09 GTFS-RT FeedMessage in metrics
 				route_type_n: '3',
 				route_id_n: '1922',
 				matched: '0',
+				running: '1', // from 2026-01-08T02:45:00+01:00 until 2026-01-10T05:55:00+01:00
 			},
 			value: 1,
 		},
@@ -196,6 +203,7 @@ test('correctly represents matched/unmatched & skipped StopTimeUpdates in metric
 				route_id_n: 'N1153',
 				matched: '1',
 				'sched_rel': '1',
+				'sched_running': '1',
 			},
 			value: 2,
 		},
@@ -209,6 +217,7 @@ test('correctly represents matched/unmatched & skipped StopTimeUpdates in metric
 				route_type_n: '3',
 				route_id_n: 'N1153',
 				matched: '1',
+				running: '1',
 			},
 			value: 2,
 		},
@@ -218,6 +227,7 @@ test('correctly represents matched/unmatched & skipped StopTimeUpdates in metric
 				route_type_n: '3',
 				route_id_n: 'N1153',
 				matched: '0',
+				running: '1',
 			},
 			value: 2 + 6 + 17,
 		},
@@ -227,6 +237,7 @@ test('correctly represents matched/unmatched & skipped StopTimeUpdates in metric
 				route_type_n: '3',
 				route_id_n: '1922',
 				matched: '0',
+				running: '1', // from 2026-01-08T02:45:00+01:00 until 2026-01-10T05:55:00+01:00
 			},
 			value: 33,
 		},

@@ -113,6 +113,7 @@ const rtItemsMetric = new Gauge({
 		'sched_rel', // TripDescriptor.ScheduleRelationship
 		'route_id_n', // normalized route_id
 		'matched', // 0 or 1
+		'sched_running', // 0 or 1
 	],
 })
 const scheduleTripInstancesMetric = new Gauge({
@@ -125,6 +126,7 @@ const scheduleTripInstancesMetric = new Gauge({
 		'route_type_n', // normalized route_type
 		'route_id_n', // normalized route_id
 		'matched', // 0 or 1
+		'running', // 0 or 1
 	],
 })
 
@@ -140,6 +142,7 @@ const rtFeedItemsAgesSeconds = new Summary({
 		'route_type_n', // normalized route_type, only if matched with Schedule trip instance
 		'route_id_n', // normalized route_id
 		'matched', // 0 or 1
+		'sched_running', // 0 or 1
 	],
 })
 
@@ -154,6 +157,7 @@ const rtSTUsMetric = new Gauge({
 		// todo: tu_matched?
 		'route_id_n', // normalized route_id
 		'matched', // 0 or 1
+		'sched_running', // 0 or 1
 		'sched_rel', // StopTimeUpdate.ScheduleRelationship
 	],
 })
@@ -167,6 +171,7 @@ const rtSTUsMetric = new Gauge({
 // 		'route_type_n', // normalized route_type
 // 		'route_id_n', // normalized route_id
 // 		'matched', // Schedule stop_time matched? – 0 or 1
+// 		'running', // 0 or 1
 // 	],
 // })
 const scheduleStopTimesMetric = new Gauge({
@@ -180,6 +185,7 @@ const scheduleStopTimesMetric = new Gauge({
 		'route_id_n', // normalized route_id
 		// todo: trip_inst_matched?
 		'matched', // Schedule stop_time matched? – 0 or 1
+		'running', // 0 or 1
 	],
 })
 
@@ -392,22 +398,26 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 
 		const _getSchedTripInstanceLabels = (rtTripDesc) => {
 			let matched = '0'
+			let running = '0'
 			let agency_id_n = '?'
 			let route_type_n = '?'
 			let route_id_n = rtTripDesc.route_id ?? '?'
 			if (scheduleTripDescsByRtTripDesc.has(rtTripDesc)) {
 				matched = '1'
 				const {
+					is_running,
 					agency_id,
 					route_type,
 					route_id,
 				} = scheduleTripDescsByRtTripDesc.get(rtTripDesc)
+				running = is_running ? '1' : '0'
 				agency_id_n = normalizeAgencyIdForMetrics(agency_id)
 				route_type_n = normalizeAgencyIdForMetrics(route_type)
 				route_id_n = normalizeRouteIdForMetrics(route_id)
 			}
 			return {
 				matched,
+				running,
 				agency_id_n,
 				route_type_n,
 				route_id_n,
@@ -420,11 +430,13 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 				'sched_rel', // TripDescriptor.ScheduleRelationship
 				'route_id_n', // normalized route_id
 				'matched', // 0 or 1
+				'sched_running', // Schedule trip instance running? 0 or 1
 			],
 			rtTripInstances.map((tripInstance) => {
 				const [tripDesc, feedItem, kind] = tripInstance
 				const {
 					matched,
+					running: sched_running,
 					route_id_n,
 				} = _getSchedTripInstanceLabels(tripDesc)
 				return [
@@ -432,6 +444,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 					String(feedItem.trip?.schedule_relationship ?? '?'),
 					route_id_n,
 					matched,
+					sched_running,
 				]
 			}),
 		)
@@ -445,6 +458,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 				'route_type_n', // normalized route_type
 				'route_id_n', // normalized route_id
 				'matched', // 0 or 1
+				'running', // 0 or 1
 			],
 			activeSchedTripInstances.map((tripInstance) => {
 				const [tripDesc] = tripInstance
@@ -457,6 +471,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 					route_type_n,
 					route_id_n,
 					matched ? '1' : '0',
+					tripDesc.is_running ? '1' : '0', // running
 				]
 			}),
 		)
@@ -469,6 +484,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 
 			const {
 				matched,
+				running: sched_running,
 				agency_id_n,
 				route_type_n,
 				route_id_n,
@@ -483,6 +499,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 				route_type_n,
 				route_id_n,
 				matched,
+				sched_running,
 			}, age / 1000)
 		}
 
@@ -492,6 +509,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 					'tu_sched_rel', // TripDescriptor.ScheduleRelationship
 					'route_id_n', // normalized route_id
 					'matched', // 0 or 1
+					'sched_running', // Schedule trip instance running? 0 or 1
 					'sched_rel', // StopTimeUpdate.ScheduleRelationship
 				],
 				rtTripInstances
@@ -501,6 +519,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 					const [tripDesc, tripUpdate] = tripInstance
 					const {
 						route_id_n,
+						running: sched_running,
 					} = _getSchedTripInstanceLabels(tripDesc)
 
 					const stuMatchStatus = stopTimeUpdateMatchStatusByRtTripDesc.get(tripDesc)
@@ -508,6 +527,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 						String(tripUpdate.schedule_relationship ?? TU_SCHEDULE_RELATIONSHIP_SCHEDULED), // tu_sched_rel
 						route_id_n,
 						stuMatchStatus[i] ? '1' : '0', // matched
+						sched_running,
 						// > The default relationship is SCHEDULED.
 						// https://gtfs.org/documentation/realtime/reference/#message-stoptimeupdate
 						String(stu.schedule_relationship ?? STU_SCHEDULE_RELATIONSHIP_SCHEDULED), // sched_rel
@@ -524,6 +544,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 					'route_type_n', // normalized route_type
 					'route_id_n', // normalized route_id
 					'matched', // Schedule stop_time matched? – 0 or 1
+					'running', // Schedule trip instance running? 0 or 1
 				],
 				activeSchedTripInstances
 				.flatMap((tripInstance) => {
@@ -536,6 +557,7 @@ const serveGtfsRtMetrics = async (cfg, opt = {}) => {
 						normalizeRouteTypeForMetrics(tripDesc.route_type), // route_type_n
 						normalizeRouteIdForMetrics(tripDesc.route_id), // route_id_n
 						stMatchStatus[i] ? '1' : '0', // matched
+						tripDesc.is_running ? '1' : '0', // running
 					])
 				}),
 			)
