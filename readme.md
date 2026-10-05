@@ -1,6 +1,6 @@
 # gtfs-rt-metrics-service
 
-**Consumes a [GTFS Realtime (GTFS-RT)](https://gtfs.org/documentation/realtime/reference/) feed and serves metrics about it via HTTP.**
+**Consumes a [GTFS Realtime (GTFS-RT)](https://gtfs.org/documentation/realtime/reference/) feed, matches it against [GTFS Schedule (Static)](https://gtfs.org/documentation/schedule/reference/) data, and serves metrics about it via HTTP.**
 
 ![ISC-licensed](https://img.shields.io/github/license/OpenDataVBB/gtfs-rt-metrics-service.svg)
 
@@ -16,9 +16,56 @@ This project uses [duckdb-gtfs-importer](https://github.com/OpenDataVBB/duckdb-g
 
 ## Getting Started
 
+Let's use [VBB](https://en.wikipedia.org/wiki/Verkehrsverbund_Berlin-Brandenburg)'s [GTFS Schedule](https://unternehmen.vbb.de/en/digital-services/datasets/) and [GTFS Realtime feeds](https://production.gtfsrt.vbb.de) as an example. Also, make sure to pick a `User-Agent` that's meaningful to the feeds' operator.
+
 ```shell
-# todo
+export GTFS_DOWNLOAD_USER_AGENT='my custom gtfs-rt-metrics-server GTFS import'
+export GTFS_DOWNLOAD_URL='https://www.vbb.de/vbbgtfs'
+export GTFS_IMPORTER_DB_PREFIX='vbb'
+
+export USER_AGENT='my custom gtfs-rt-metrics-server'
+export GTFS_RT_URL='https://production.gtfsrt.vbb.de/data'
 ```
+
+First, import the GTFS Schedule data into a DuckDB. You can configure access to the database using the [standard `PG*` environment variables](https://www.postgresql.org/docs/18/libpq-envars.html).
+
+```shell
+./import.sh
+# […]
+# no database to remove
+# creating symlink: vbb.gtfs.duckdb -> vbb_1791204999_c4861a.gtfs.duckdb
+```
+
+This will create a file `gtfs/vbb_$timestamp_$digest.gtfs.duckdb`, linked to `gtfs/vbb.gtfs.duckdb`.
+
+> [TIP]
+> In production, make sure ro tun `import.sh` regularly.
+> Only after a successful import, the script will change the symbolic link to the latest import, so `gtfs/vbb.gtfs.duckdb` should always point to a fully imported dataset.
+
+Now, let's run the metrics service.
+
+```shell
+serve-gtfs-rt-metrics "$GTFS_RT_URL"
+# {"level":30,"time":1791205859116,"pid":85054,"name":"service","address":"::","family":"IPv6","port":3000,"msg":"serving Prometheus metrics on port 3000"}
+```
+
+You can now fetch metrics using Prometheus, or manually:
+
+```shell
+curl 'http://localhost:3000/metrics' -fsSL -H 'User-Agent: derhuerst' | grep gtfs_rt_items | grep 'sched_rel="0"' | head -n 5
+# gtfs_rt_items{kind="tu",sched_rel="0",route_id_n="24056_100",matched="0",sched_running="0"} 28
+# gtfs_rt_items{kind="tu",sched_rel="0",route_id_n="10224",matched="1",sched_running="1"} 6
+# gtfs_rt_items{kind="tu",sched_rel="0",route_id_n="17457",matched="1",sched_running="1"} 11
+# gtfs_rt_items{kind="tu",sched_rel="0",route_id_n="5259_700",matched="0",sched_running="0"} 1
+# gtfs_rt_items{kind="tu",sched_rel="0",route_id_n="17299",matched="1",sched_running="1"} 6
+```
+
+> [TIP]
+>During testing, you can pretty-print its logs using [`pino-pretty`](https://www.npmjs.com/package/pino-pretty).
+>
+> ```shell
+> serve-gtfs-rt-metrics "$GTFS_RT_URL" | npx pino-pretty
+> ```
 
 
 ## Usage
