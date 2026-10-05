@@ -104,20 +104,40 @@ test('correctly represents sample Flix 2026-01-09 GTFS-RT FeedMessage in metrics
 	deepStrictEqualMetricValues(gtfs_rt_items?.values, [
 		// matched
 		{ // entity `N1153-1-0255012026-DO#AOS-00-position`
-			labels: {kind: 'vp', sched_rel: '0', matched: '1', route_id_n: 'N1153'},
+			labels: {
+				kind: 'vp',
+				sched_rel: '0',
+				matched: '1',
+				route_id_n: 'N1153',
+			},
 			value: 1,
 		},
 		{ // entity `N1153-1-0255012026-DO#AOS-00-stoptimes`
-			labels: {kind: 'tu', sched_rel: '0', matched: '1', route_id_n: 'N1153'},
+			labels: {
+				kind: 'tu',
+				sched_rel: '0',
+				matched: '1',
+				route_id_n: 'N1153',
+			},
 			value: 1,
 		},
 		// unmatched
 		{ // entity `2686-1-1400112025-BUF#6MT-00-stoptimes`
-			labels: {kind: 'tu', sched_rel: '0', matched: '0', route_id_n: '?'},
+			labels: {
+				kind: 'tu',
+				sched_rel: '0',
+				matched: '0',
+				route_id_n: '?',
+			},
 			value: 1,
 		},
 		{ // entity `N885-2-0300012026-AMD#ZAG-00-position`
-			labels: {kind: 'vp', sched_rel: '0', matched: '0', route_id_n: '?'},
+			labels: {
+				kind: 'vp',
+				sched_rel: '0',
+				matched: '0',
+				route_id_n: '?',
+			},
 			value: 1,
 		},
 	])
@@ -127,13 +147,23 @@ test('correctly represents sample Flix 2026-01-09 GTFS-RT FeedMessage in metrics
 		// matched:
 		// - trip_id `N1153-1-0255012026-DO#AOS-00`
 		{
-			labels: {agency_id_n: 'FLI', route_type_n: '3', route_id_n: 'N1153', matched: '1'},
+			labels: {
+				agency_id_n: 'FLI',
+				route_type_n: '3',
+				route_id_n: 'N1153',
+				matched: '1',
+			},
 			value: 1,
 		},
 		// unmatched
 		// - trip_id `1922-5-0145012026-BM#BDX-00`
 		{
-			labels: {agency_id_n: 'FLI', route_type_n: '3', route_id_n: '1922', matched: '0'},
+			labels: {
+				agency_id_n: 'FLI',
+				route_type_n: '3',
+				route_id_n: '1922',
+				matched: '0',
+			},
 			value: 1,
 		},
 	])
@@ -161,7 +191,12 @@ test('correctly represents matched/unmatched & skipped StopTimeUpdates in metric
 	const gtfs_rt_stoptimeupdates = metrics.find(m => m.name === 'gtfs_rt_stoptimeupdates')
 	deepStrictEqualMetricValues(gtfs_rt_stoptimeupdates?.values, [
 		{
-			labels: {tu_sched_rel: '0', route_id_n: 'N1153', matched: '1', 'sched_rel': '1'},
+			labels: {
+				tu_sched_rel: '0',
+				route_id_n: 'N1153',
+				matched: '1',
+				'sched_rel': '1',
+			},
 			value: 2,
 		},
 	])
@@ -169,15 +204,30 @@ test('correctly represents matched/unmatched & skipped StopTimeUpdates in metric
 	const gtfs_rt_schedule_stoptimes = metrics.find(m => m.name === 'gtfs_rt_schedule_stoptimes')
 	deepStrictEqualMetricValues(gtfs_rt_schedule_stoptimes?.values, [
 		{
-			labels: {agency_id_n: 'FLI', route_type_n: '3', route_id_n: 'N1153', matched: '1'},
+			labels: {
+				agency_id_n: 'FLI',
+				route_type_n: '3',
+				route_id_n: 'N1153',
+				matched: '1',
+			},
 			value: 2,
 		},
 		{
-			labels: {agency_id_n: 'FLI', route_type_n: '3', route_id_n: 'N1153', matched: '0'},
+			labels: {
+				agency_id_n: 'FLI',
+				route_type_n: '3',
+				route_id_n: 'N1153',
+				matched: '0',
+			},
 			value: 2 + 6 + 17,
 		},
 		{
-			labels: {agency_id_n: 'FLI', route_type_n: '3', route_id_n: '1922', matched: '0'},
+			labels: {
+				agency_id_n: 'FLI',
+				route_type_n: '3',
+				route_id_n: '1922',
+				matched: '0',
+			},
 			value: 33,
 		},
 	])
